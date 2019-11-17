@@ -1,0 +1,19 @@
+---
+title: "final"
+author: "esther"
+date: "11/17/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+```
+
+Topic....................?????????
+
+1. Zoo Animal Classification - This dataset is from UCI and it has two sections. One of the csv contains a list of 101 annimals from a zoo. It includes variables about these animals such as if they have hair, if they have a backbone, and so on. Seven classes of animals are represented in the dataset, including mammals, birds, and reptiles.
+
+For this problem I could use a cool tree, and then use Linear Discriminant Analysis as a new method. (?)
+
+
