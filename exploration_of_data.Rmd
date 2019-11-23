@@ -10,10 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(readr)
 ```
 
-Topic....................?????????
-
-1. Zoo Animal Classification - This dataset is from UCI and it has two sections. One of the csv contains a list of 101 annimals from a zoo. It includes variables about these animals such as if they have hair, if they have a backbone, and so on. Seven classes of animals are represented in the dataset, including mammals, birds, and reptiles.
-
-For this problem I could use a cool tree, and then use Linear Discriminant Analysis as a new method. (?)
-
-
+```{r}
+library(readr)
+Metro_Interstate_Traffic_Volume <- read_csv("~/dataset/Metro_Interstate_Traffic_Volume.csv")
+head(Metro_Interstate_Traffic_Volume)
+```
