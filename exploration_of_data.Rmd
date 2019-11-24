@@ -8,10 +8,60 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(readr)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+```
+The Metro Interstate Traffic volume dataset is from UCI Machine Learning Repostitory. There are nine variables and 48,204 observations of every hour since 2012 to 2018. Holiday is a binary variable indicating whether it was a holiday. Temperature is the temperature at each time in Kelvin. Snow is the amount of snow that fell in the past hour, and rain is the amount of rain that fell in the past hour. Cloud is the percentage of cloud cover. Weather main and weather description indicate the weather. Date and time is the local time of the data collection. There are a couple of options for working with this data to predict the traffic volume given this set of variables.
+```{r data}
+traffic <- read_csv("~/dataset/Metro_Interstate_Traffic_Volume.csv")
+head(traffic)
 ```
 
-```{r}
-library(readr)
-Metro_Interstate_Traffic_Volume <- read_csv("~/dataset/Metro_Interstate_Traffic_Volume.csv")
-head(Metro_Interstate_Traffic_Volume)
+```{r formatting}
+unique(traffic$weather_main)
+#change columns 
+traffic %>%
+  mutate(temp = temp - 270.15, 
+         weather_main = factor(weather_main))
+
+levels(traffic$weather_main)
+
+traffic$date <- as.Date(traffic$date_time, "%m/%d/%Y")
+traffic$day <- weekdays(traffic$date)
+
+daily_mean_temp <- traffic %>% group_by(date) %>% summarize(mean(temp))
+daily_mean_vol <- traffic %>% group_by(date) %>% summarize(mean(traffic_volume))
+daily_weather <- traffic %>% group_by(date) %>% 
+
+                  
+```
+
+```{r bp}
+#boxplot
+bp <- ggplot(traffic, aes(x=weather_main, y=traffic_volume, group=weather_main)) + 
+  geom_boxplot(aes(fill=weather_main))
+bp
+```
+
+```{r sampling}
+set.seed(123)
+index <- sample(1:nrow(traffic), 1000)
+index
+sample <- traffic[index, ]
+```
+
+```{r plot}
+
+
+```
+
+```{r plot}
+
+
+```
+
+```{r model}
+
+
 ```
