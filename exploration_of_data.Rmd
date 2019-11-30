@@ -20,14 +20,27 @@ calculate_mode <- function(x) {
   uniqx[which.max(tabulate(match(x, uniqx)))]
 }
 ```
-The Metro Interstate Traffic volume dataset is from UCI Machine Learning Repostitory. There are nine variables and 48,204 observations of every hour since 2012 to 2018. Holiday is a binary variable indicating whether it was a holiday. Temperature is the temperature at each time in Kelvin. Snow is the amount of snow that fell in the past hour, and rain is the amount of rain that fell in the past hour. Cloud is the percentage of cloud cover. Weather main and weather description indicate the weather. Date and time is the local time of the data collection. There are a couple of options for working with this data to predict the traffic volume given this set of variables.
+The Metro Interstate Traffic volume dataset is from UCI Machine Learning Repostitory, data is taken from Minneapolis-St Paul, MN traffic volume for westbound I-94. There are nine variables and 48,204 observations of every hour from 2012 to 2018. 
+
+Variables:
+holiday - categorical indicating if there was a holiday
+temperature - temperature in kelvin
+rain_1h - rain in mm that occured in the hour
+snow_1h snow in mm that occured in the hour
+clouds_all - cloud cover percentage
+weather_main - description of weather
+weather_descrription - long description
+date_time - hour of data collected
+traffic_volume - numeric hourly average true range of traffic volume
+
 ```{r data}
 #read in data
-traffic <- read_csv("~/dataset/Metro_Interstate_Traffic_Volume.csv")
+traffic <- read_csv("Metro_Interstate_Traffic_Volume.csv")
 head(traffic)
+dim(traffic)
 ```
 
-```{r formatting}
+```{r adddinggg stuffff cuz im bored}
 unique(traffic$weather_main)
 #change columns into new dataframe df
 df <- traffic %>%
@@ -39,7 +52,7 @@ df <- traffic %>%
 
 #new columns
 df$date <- as.Date(traffic$date_time, "%m/%d/%Y")
-df$day <- weekdays(traffic$date)
+df$day <- weekdays(df$date)
 df$hour <- strftime(traffic$date_time, format="%H:%M:%S")
 ```
 
@@ -49,7 +62,52 @@ df$day <- ordered(df$day, levels=c("Monday", "Tuesday", "Wednesday", "Thursday",
 "Friday", "Saturday", "Sunday"))
 ```
 
-```{r average by day}
+```{r plots}
+holiday <- traffic %>% filter(holiday != "None")
+
+ggplot(holiday, aes(x = holiday)) +
+  geom_bar()
+
+#there are very few holidays 
+```
+```{r}
+ggplot(df, aes(y = temp)) +
+  geom_boxplot()
+
+#there is an outlier we'll have to chop it 
+```
+```{r}
+ggplot(traffic, aes(x = weather_main)) +
+  geom_bar()
+```
+```{r}
+ggplot(traffic, aes(x = weather_description)) +
+  geom_bar()
+```
+```{r}
+ggplot(traffic, aes(x = clouds_all)) +
+  geom_bar()
+```
+```{r bp}
+#boxplot
+ggplot(traffic, aes(x=weather_main, y=traffic_volume, group=weather_main)) + 
+  geom_boxplot(aes(fill=weather_main))
+```
+```{r bp}
+#boxplot
+ggplot(holiday, aes(x=holiday, y=traffic_volume, group=holiday)) + 
+  geom_boxplot(aes(fill=holiday))
+```
+
+```{r avg mlr}
+mlr <- lm()
+```
+
+```{r model}
+
+
+```
+```{r daily info}
 #taking the average of each variable by date
 daily_mean_temp <- df %>% group_by(date) %>% summarize(temp = mean(temp))
 daily_mean_vol <- traffic %>% group_by(date) %>% summarize(vol = mean(traffic_volume))
@@ -70,8 +128,6 @@ daily_weather <- x %>% group_by(date) %>% summarize(weather = calculate_mode(wea
 avg <- merge(daily_weather, merge(is_holiday, merge(daily_mean_cloud, merge(daily_mean_snow, merge(daily_mean_rain,merge(daily_mean_temp, daily_mean_vol))))))
 ```
 
-
-
 ```{r avg format}
 avg %>% 
   mutate(
@@ -80,32 +136,4 @@ avg %>%
 ```
 ```{r sample}
 sample <- sample_n(df, 1000, replace = FALSE)
-```
-
-```{r plot}
-plot(avg$temp, avg$vol)
-plot(avg$cloud, avg$vol)
-
-
-d <- ggplot(sample, aes(x = day, y = traffic_volume, group = day)) +
-  geom_boxplot()
-d
-```
-
-```{r bp}
-#boxplot
-bp <- ggplot(traffic, aes(x=weather_main, y=traffic_volume, group=weather_main)) + 
-  geom_boxplot(aes(fill=weather_main))
-bp
-```
-
-```{r avg mlr}
-mlr <- lm()
-```
-
-
-
-```{r model}
-
-
 ```
