@@ -179,7 +179,11 @@ plot(df$hour2, df$traffic_volume)
 abline(lm(traffic_volume ~ hour2, data = df))
 ```
 ```{r}
-pr <- lm(traffic_volume ~ hour2 + hour2^2, da )
+pr <- lm(traffic_volume ~ temp + I(hour2^2) + I(hour2^3), data = df)
+summary(pr)
+
+plot(df$hour2, df$traffic_volume)
+lines(sort(df$hour2), fitted(pr)[order(df$hour2)], col='red', type='b') 
 ```
 
 
