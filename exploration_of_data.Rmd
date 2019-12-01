@@ -178,6 +178,9 @@ abline(lm(traffic_volume ~ temp, data = df))
 plot(df$hour2, df$traffic_volume)
 abline(lm(traffic_volume ~ hour2, data = df))
 ```
+```{r}
+pr <- lm(traffic_volume ~ hour2 + hour2^2, da )
+```
 
 
 ```{r tree}
