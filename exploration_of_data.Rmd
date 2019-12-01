@@ -11,14 +11,9 @@ library(readr)
 library(ggplot2)
 library(dplyr)
 library(lubridate)
-```
+library(repr)
 
-```{r mode}
-#mode of factor variables
-calculate_mode <- function(x) {
-  uniqx <- unique(x)
-  uniqx[which.max(tabulate(match(x, uniqx)))]
-}
+options(repr.plot.width=5, repr.plot.height=4)
 ```
 The Metro Interstate Traffic volume dataset is from UCI Machine Learning Repostitory, data is taken from Minneapolis-St Paul, MN traffic volume for westbound I-94. There are nine variables and 48,204 observations of every hour from 2012 to 2018. 
 
@@ -49,11 +44,53 @@ df <- traffic %>%
           weather_main = factor(weather_main),
           holiday = ifelse(holiday == "None", 0, holiday) %>% as.numeric,
           holiday = ifelse(is.na(holiday), 1, 0) %>% as.numeric)
-
+```
+```{r}
 #new columns
 df$date <- as.Date(traffic$date_time, "%m/%d/%Y")
 df$day <- weekdays(df$date)
-df$hour <- strftime(traffic$date_time, format="%H:%M:%S")
+df$hour <- strftime(traffic$date_time, format="%H", tz = "CST")
+df$hour2 <- as.numeric(df$hour)
+```
+```{r}
+df$year <- strftime(traffic$date_time, format="%Y")
+```
+```{r}
+df$tod <- ifelse(df$hour2 >= 03 & df$hour2 <= 07 , "Early Morning",
+            ifelse(df$hour2 > 07 & df$hour2 <= 11, "Morning",
+            ifelse(df$hour2 > 11 & df$hour2 <= 17, "Afternoon", 
+            ifelse(df$hour2 > 17 & df$hour2 <= 20, "Evening", "Night"))))
+```
+```{r https://stackoverflow.com/a/46846474 source}
+#mode of factor variables
+calculate_mode <- function(x) {
+  uniqx <- unique(x)
+  uniqx[which.max(tabulate(match(x, uniqx)))]
+}
+```
+```{r https://stackoverflow.com/a/9501225 source}
+getSeason <- function(DATES) {
+    WS <- as.Date("2012-12-15", format = "%Y-%m-%d") # Winter Solstice
+    SE <- as.Date("2012-3-15",  format = "%Y-%m-%d") # Spring Equinox
+    SS <- as.Date("2012-6-15",  format = "%Y-%m-%d") # Summer Solstice
+    FE <- as.Date("2012-9-15",  format = "%Y-%m-%d") # Fall Equinox
+
+    # Convert dates from any year to 2012 dates
+    d <- as.Date(strftime(DATES, format="2012-%m-%d"))
+
+    ifelse (d >= WS | d < SE, "Winter",
+      ifelse (d >= SE & d < SS, "Spring",
+        ifelse (d >= SS & d < FE, "Summer", "Fall")))
+}
+```
+```{r}
+df$season <- getSeason(df$date_time)
+```
+```{r}
+df %>% mutate(tod = as.factor(tod))
+```
+```{r}
+df$tod <- ordered(df$tod, levels = c("Early Morning", "Morning", "Afternoon", "Evening", "Night"))
 ```
 
 ```{r}
@@ -62,51 +99,123 @@ df$day <- ordered(df$day, levels=c("Monday", "Tuesday", "Wednesday", "Thursday",
 "Friday", "Saturday", "Sunday"))
 ```
 
-```{r plots}
+```{r hist}
 holiday <- traffic %>% filter(holiday != "None")
 
 ggplot(holiday, aes(x = holiday)) +
   geom_bar()
 
-#there are very few holidays 
+#there are few holidays 
 ```
-```{r}
+```{r hist}
 ggplot(df, aes(y = temp)) +
   geom_boxplot()
 
 #there is an outlier we'll have to chop it 
 ```
-```{r}
+```{r hist}
 ggplot(traffic, aes(x = weather_main)) +
   geom_bar()
 ```
-```{r}
+```{r hist}
 ggplot(traffic, aes(x = weather_description)) +
   geom_bar()
 ```
-```{r}
+
+```{r hist}
 ggplot(traffic, aes(x = clouds_all)) +
   geom_bar()
 ```
+```{r numerical}
+nums <- df %>% select_if(is.numeric)
+plot(nums)
+```
+```{r}
+plot(df$snow_1h, df$traffic_volume)
+```
+
 ```{r bp}
 #boxplot
 ggplot(traffic, aes(x=weather_main, y=traffic_volume, group=weather_main)) + 
-  geom_boxplot(aes(fill=weather_main))
+  geom_boxplot()
+```
+```{r}
+ggplot(traffic, aes(x = weather_description, y = traffic_volume, group = weather_description)) +
+  geom_boxplot()
 ```
 ```{r bp}
 #boxplot
 ggplot(holiday, aes(x=holiday, y=traffic_volume, group=holiday)) + 
-  geom_boxplot(aes(fill=holiday))
+  geom_boxplot()
+```
+```{r}
+ggplot(df, aes(x = day, y = traffic_volume, group = day)) +
+  geom_boxplot()
+```
+```{r}
+ggplot(df, aes(x = tod, y = traffic_volume, group = tod)) +
+  geom_boxplot()
+```
+```{r}
+ggplot(df, aes(x = year, y = traffic_volume)) +
+  geom_boxplot() 
 ```
 
-```{r avg mlr}
-mlr <- lm()
+```{r}
+slr <- lm(traffic_volume ~ day, data = df)
+summary(slr)
+
+plot(df$day, df$traffic_volume)
+abline(lm(traffic_volume ~ day, data = df))
+```
+```{r}
+df$temp = ifelse(df$temp < -50, 0, df$temp)
+
+plot(df$temp, df$traffic_volume)
+abline(lm(traffic_volume ~ temp, data = df))
+```
+```{r}
+plot(df$hour2, df$traffic_volume)
+abline(lm(traffic_volume ~ hour2, data = df))
 ```
 
-```{r model}
 
+```{r tree}
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ```{r daily info}
 #taking the average of each variable by date
 daily_mean_temp <- df %>% group_by(date) %>% summarize(temp = mean(temp))
