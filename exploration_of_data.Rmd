@@ -132,6 +132,7 @@ plot(nums)
 ```
 ```{r}
 plot(df$snow_1h, df$traffic_volume)
+plot(df$rain_1h, df$traffic_volume)
 ```
 
 ```{r bp}
@@ -175,6 +176,11 @@ plot(df$temp, df$traffic_volume)
 abline(lm(traffic_volume ~ temp, data = df))
 ```
 ```{r}
+plot(df$clouds_all, df$traffic_volume)
+plot(df$weather_main, df$temp)
+```
+
+```{r}
 plot(df$hour2, df$traffic_volume)
 abline(lm(traffic_volume ~ hour2, data = df))
 ```
@@ -188,6 +194,46 @@ lines(sort(df$hour2), fitted(pr)[order(df$hour2)], col='red', type='b')
 
 
 ```{r tree}
+library(rpart)
+```
+
+```{r}
+rows <- sample(1:48204, 24102)
+testing <- df[rows,]
+training <- df[-rows,]
+```
+
+```{r}
+bootstrapTrainingData = function(){
+        nObs = 1:nrow(d)
+        boostrap = d[sample(nObs,replace=TRUE),]
+        return(boostrap)
+}
+```
+
+```{r}
+big <- rpart(traffic_volume ~ weather_main + hour2 + temp + day, data = training, method = "anova")
+printcp(big)
+plotcp(big)
+rsq.rpart(big)
+plot(big, uniform=TRUE,
+   main="Regression Tree for stuff ")
+text(big, use.n=TRUE, all=TRUE, cex=.8)
+```
+```{r}
+X = testing[,c("weather_main","hour2","temp","day")]
+X = testing[order(testing$traffic_volume),]
+predictions = predict(big,X)
+```
+
+```{r}
+plot(X$hour2,X$traffic_volume,xlab='Years',ylab="Salary",tck=0.01)
+lines(X$traffic_volume,predictions)
+```
+
+```{r}
+
+
 
 ```
 
