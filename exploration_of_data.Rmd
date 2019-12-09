@@ -232,10 +232,15 @@ lines(X$traffic_volume,predictions)
 ```
 
 ```{r}
+twentyfourteen <- df %>% filter(year == 2014)
+twentyfourteen$month <- month(twentyfourteen$date_time)
+
+chop <- twentyfourteen %>% filter(month < 2)
+ggplot(aes(x = date_time, y = traffic_volume), data = df) + geom_line() + facet_wrap(~year)
+```
+```{r}
 
 ```
-
-
 
 
 
