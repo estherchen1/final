@@ -23,7 +23,7 @@ dmydf <- as.data.frame(predict(dmy, newdata=dff))
 ```
 
 ```{r}
-df1 <- df[, !(colnames(df) %in% c("hour","month",""))]
+df1 <- df[, colnames(df) %in% c("traffic_volume")]
 ```
 
 ```{r}
@@ -31,12 +31,10 @@ df1 <- df[, !(colnames(df) %in% c("hour","month",""))]
 ```
 
 ```{r}
-nndat <- cbind(df2, dmydf)
+nndat <- cbind(df1, dmydf)
 ```
 ```{r}
 str(nndat)
-
-
 ```
 
 ```{test train}
