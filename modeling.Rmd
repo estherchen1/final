@@ -11,15 +11,15 @@ library(dplyr)
 library(lubridate)
 library(repr)
 library(ggfortify)
-
 ```
 
 ```{r data process for nn}
 #collapse some of the variables actually further...skdjfljfl
 library(plyr)
 library(caret)
-dmy <- dummyVars(" ~ .", data = df, fullRank = TRUE)
-dmydf <- as.data.frame(predict(dmy, newdata=df))
+dff <- df[, !(colnames(df) %in% c("weather_description"))]
+dmy <- dummyVars(" ~ .", data = dff, fullRank = TRUE)
+dmydf <- as.data.frame(predict(dmy, newdata=dff))
 ```
 
 ```{r}
@@ -27,7 +27,7 @@ df1 <- df[, !(colnames(df) %in% c("hour","month",""))]
 ```
 
 ```{r}
-df2 <- df1[, (colnames(df1) %in% c("traffic_volume"))]
+
 ```
 
 ```{r}
