@@ -1,0 +1,132 @@
+---
+title: "modeling"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(repr)
+library(ggfortify)
+
+```
+
+```{r data process for nn}
+library(plyr)
+library(caret)
+dmy <- dummyVars(" ~ .", data = df, fullRank = TRUE)
+dmydf <- as.data.frame(predict(dmy, newdata=df))
+```
+
+```{r}
+df1 <- df[, !(colnames(df) %in% c("hour","month",""))]
+```
+
+```{r}
+df2 <- df1[, (colnames(df1) %in% c("traffic_volume"))]
+```
+
+```{r}
+nndat <- cbind(df2, dmydf)
+```
+```{r}
+str(nndat)
+
+
+```
+
+```{test train}
+samplesize = 0.60 * nrow(nndat)
+set.seed(1)
+index = sample( seq_len ( nrow ( nndat ) ), size = samplesize )
+
+datatrain = nndat[ index, ]
+datatest = nndat[-index, ]
+```
+
+```{r scale data}
+max = apply(nndat , 2 , max)
+min = apply(nndat, 2 , min)
+scaled = as.data.frame(scale(nndat, center = min, scale = max - min))
+```
+
+```{r}
+install.packages("neuralnet ")
+
+library(neuralnet)
+
+# creating training and test set
+trainNN = scaled[index , ]
+testNN = scaled[-index , ]
+
+# fit neural network
+set.seed(2)
+NN = neuralnet(traffic_volume ~  + protein + fat + sodium + fiber, trainNN, hidden = 3 , linear.output = T )
+
+# plot neural network
+plot(NN)
+```
+
+```{r arima time series????}
+voltime <- seventeen %>% filter(season == "Fall") %>% select(date_time, traffic_volume)
+volts <- ts(voltime)
+```
+
+```{r}
+autoplot(volts)
+```
+
+```{r}
+plot(seventeen$hour2, seventeen$traffic_volume)
+abline(lm(traffic_volume ~ hour2, data = seventeen))
+```
+```{r}
+pr <- lm(traffic_volume ~ temp + I(hour2^2) + I(hour2^3), data = seventeen)
+summary(pr)
+
+plot(seventeen$hour2, seventeen$traffic_volume)
+lines(sort(seventeen$hour2), fitted(pr)[order(seventeen$hour2)], col='red', type='b') 
+```
+
+
+```{r tree}
+library(rpart)
+```
+
+```{r testing and training}
+rows <- sample(1:48204, 24102)
+testing <- df[rows,]
+training <- df[-rows,]
+```
+
+```{r bootstrap thing}
+bootstrapTrainingData = function(){
+        nObs = 1:nrow(d)
+        boostrap = d[sample(nObs,replace=TRUE),]
+        return(boostrap)
+}
+```
+
+```{r tree model thing}
+big <- rpart(traffic_volume ~ weather_main + hour2 + temp + day, data = training, method = "anova")
+printcp(big)
+plotcp(big)
+rsq.rpart(big)
+plot(big, uniform=TRUE,
+   main="Regression Tree for stuff ")
+text(big, use.n=TRUE, all=TRUE, cex=.8)
+```
+```{r testing}
+X = testing[,c("weather_main","hour2","temp","day")]
+X = testing[order(testing$traffic_volume),]
+predictions = predict(big,X)
+```
+
+```{r}
+plot(X$hour2,X$traffic_volume,xlab='stuff',ylab="volume",tck=0.01)
+lines(X$traffic_volume,predictions)
+```
+

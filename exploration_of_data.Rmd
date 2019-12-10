@@ -33,9 +33,10 @@ traffic_volume - numeric hourly average true range of traffic volume
 traffic <- read_csv("Metro_Interstate_Traffic_Volume.csv")
 head(traffic)
 dim(traffic)
+summary(traffic$traffic_volume)
 ```
 
-```{r adddinggg stuffff cuz im bored}
+```{r data edit}
 unique(traffic$weather_main)
 #change columns into new dataframe df
 df <- traffic %>%
@@ -45,21 +46,25 @@ df <- traffic %>%
           holiday = ifelse(holiday == "None", 0, holiday) %>% as.numeric,
           holiday = ifelse(is.na(holiday), 1, 0) %>% as.numeric)
 ```
-```{r}
+```{r adding columns}
 #new columns
 df$date <- as.Date(traffic$date_time, "%m/%d/%Y")
 df$day <- weekdays(df$date)
 df$hour <- strftime(traffic$date_time, format="%H", tz = "CST")
-df$hour2 <- as.numeric(df$hour)
+df$hournum <- as.numeric(df$hour)
 ```
-```{r}
+```{r adding years}
 df$year <- strftime(traffic$date_time, format="%Y")
 ```
 ```{r}
-df$tod <- ifelse(df$hour2 >= 03 & df$hour2 <= 07 , "Early Morning",
-            ifelse(df$hour2 > 07 & df$hour2 <= 11, "Morning",
-            ifelse(df$hour2 > 11 & df$hour2 <= 17, "Afternoon", 
-            ifelse(df$hour2 > 17 & df$hour2 <= 20, "Evening", "Night"))))
+df$month <- month(traffic$date_time)
+df$monthnum <- as.numeric(df$month)
+```
+```{r adding times}
+df$tod <- ifelse(df$hournum >= 03 & df$hournum <= 07 , "Early Morning",
+            ifelse(df$hournum > 07 & df$hournum <= 11, "Morning",
+            ifelse(df$hournum > 11 & df$hournum <= 17, "Afternoon", 
+            ifelse(df$hournum > 17 & df$hournum <= 20, "Evening", "Night"))))
 ```
 ```{r https://stackoverflow.com/a/46846474 source}
 #mode of factor variables
@@ -83,79 +88,92 @@ getSeason <- function(DATES) {
         ifelse (d >= SS & d < FE, "Summer", "Fall")))
 }
 ```
-```{r}
+```{r add season}
 df$season <- getSeason(df$date_time)
 ```
-```{r}
+```{r make time of day a factor}
 df %>% mutate(tod = as.factor(tod))
 ```
-```{r}
+```{r order time of day}
 df$tod <- ordered(df$tod, levels = c("Early Morning", "Morning", "Afternoon", "Evening", "Night"))
 ```
 
-```{r}
+```{r order days}
 #ordering days 
 df$day <- ordered(df$day, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", 
 "Friday", "Saturday", "Sunday"))
 ```
 
-```{r hist}
+```{r}
+ggplot(traffic, aes(x = traffic_volume)) +
+  geom_histogram(bins = 40)
+```
+
+
+```{r holiday histogram}
 holiday <- traffic %>% filter(holiday != "None")
 
 ggplot(holiday, aes(x = holiday)) +
   geom_bar()
-
 #there are few holidays 
 ```
-```{r hist}
+```{r temperature boxplot}
 ggplot(df, aes(y = temp)) +
-  geom_boxplot()
-
-#there is an outlier we'll have to chop it 
+  geom_boxplot() + 
+  facet_wrap(~year)
 ```
-```{r hist}
+```{r weather histogram}
 ggplot(traffic, aes(x = weather_main)) +
-  geom_bar()
+  geom_bar() 
 ```
-```{r hist}
+```{r weather description histogram}
 ggplot(traffic, aes(x = weather_description)) +
   geom_bar()
 ```
 
-```{r hist}
+```{r cloudcover histogram}
 ggplot(traffic, aes(x = clouds_all)) +
   geom_bar()
 ```
-```{r numerical}
-nums <- df %>% select_if(is.numeric)
-plot(nums)
-```
-```{r}
+
+```{r numerical plots}
+plot(df$clouds_all, df$traffic_volume)
 plot(df$snow_1h, df$traffic_volume)
 plot(df$rain_1h, df$traffic_volume)
 ```
 
-```{r bp}
-#boxplot
+```{r weather and volume}
 ggplot(traffic, aes(x=weather_main, y=traffic_volume, group=weather_main)) + 
   geom_boxplot()
+
+ggplot(traffic, aes(x = weather_main, y = traffic_volume, group = weather_main)) +
+  geom_bar(stat = "identity")
 ```
-```{r}
+```{r weather desc and volume}
 ggplot(traffic, aes(x = weather_description, y = traffic_volume, group = weather_description)) +
   geom_boxplot()
 ```
-```{r bp}
+```{r holiday and volume}
 #boxplot
 ggplot(holiday, aes(x=holiday, y=traffic_volume, group=holiday)) + 
   geom_boxplot()
+
+ggplot(holiday, aes(x = holiday, y = traffic_volume, group = holiday)) +
+  geom_bar(stat = "identity")
 ```
-```{r}
+```{r day of week and volume}
 ggplot(df, aes(x = day, y = traffic_volume, group = day)) +
   geom_boxplot()
+
+ggplot(df, aes(x = day, y = traffic_volume, group = day)) +
+  geom_bar(stat = "identity")
 ```
 ```{r}
 ggplot(df, aes(x = tod, y = traffic_volume, group = tod)) +
   geom_boxplot()
+
+ggplot(df, aes(x = tod, y = traffic_volume, group = tod)) +
+  geom_bar(stat = "identity")
 ```
 ```{r}
 ggplot(df, aes(x = year, y = traffic_volume)) +
@@ -179,126 +197,37 @@ abline(lm(traffic_volume ~ temp, data = df))
 plot(df$clouds_all, df$traffic_volume)
 plot(df$weather_main, df$temp)
 ```
-
-```{r}
-plot(df$hour2, df$traffic_volume)
-abline(lm(traffic_volume ~ hour2, data = df))
+```{r data into years}
+twelve <- df %>% filter(year == 2012)
+thirteen <- df %>% filter(year == 2013)
+fourteen <- df %>% filter(year == 2014)
+fifteen <- df %>% filter(year == 2015)
+sixteen <- df %>% filter(year == 2016)
+seventeen <- df %>% filter(year == 2017)
+eighteen <- df %>% filter(year == 2018)
+```
+```{r temperature traffic}
+plot(twelve$temp, twelve$traffic_volume)
+plot(thirteen$temp, thirteen$traffic_volume)
+plot(fourteen$temp, fourteen$traffic_volume)
+plot(fifteen$temp, fifteen$traffic_volume)
+plot(sixteen$temp, sixteen$traffic_volume)
+plot(seventeen$temp, seventeen$traffic_volume)
+plot(eighteen$temp, eighteen$traffic_volume)
 ```
 ```{r}
-pr <- lm(traffic_volume ~ temp + I(hour2^2) + I(hour2^3), data = df)
-summary(pr)
-
-plot(df$hour2, df$traffic_volume)
-lines(sort(df$hour2), fitted(pr)[order(df$hour2)], col='red', type='b') 
+ggplot(seventeen, aes(x = season, y = traffic_volume, group = season)) +
+  geom_boxplot()
 ```
+```{r hours}
+ggplot(df, aes(x = hournum, y = traffic_volume, group = hournum)) +
+  geom_boxplot()
 
+ggplot(seventeen, aes(x = hournum, y = traffic_volume, group = hournum)) +
+  geom_boxplot()
 
-```{r tree}
-library(rpart)
-```
+ggplot(sixteen, aes(X = hournum, y = traffic_volume, group = hournum)) +
+  geom_boxplot()
 
-```{r}
-rows <- sample(1:48204, 24102)
-testing <- df[rows,]
-training <- df[-rows,]
-```
-
-```{r}
-bootstrapTrainingData = function(){
-        nObs = 1:nrow(d)
-        boostrap = d[sample(nObs,replace=TRUE),]
-        return(boostrap)
-}
-```
-
-```{r}
-big <- rpart(traffic_volume ~ weather_main + hour2 + temp + day, data = training, method = "anova")
-printcp(big)
-plotcp(big)
-rsq.rpart(big)
-plot(big, uniform=TRUE,
-   main="Regression Tree for stuff ")
-text(big, use.n=TRUE, all=TRUE, cex=.8)
-```
-```{r}
-X = testing[,c("weather_main","hour2","temp","day")]
-X = testing[order(testing$traffic_volume),]
-predictions = predict(big,X)
-```
-
-```{r}
-plot(X$hour2,X$traffic_volume,xlab='Years',ylab="Salary",tck=0.01)
-lines(X$traffic_volume,predictions)
-```
-
-```{r}
-twentyfourteen <- df %>% filter(year == 2014)
-twentyfourteen$month <- month(twentyfourteen$date_time)
-
-chop <- twentyfourteen %>% filter(month < 2)
-ggplot(aes(x = date_time, y = traffic_volume), data = df) + geom_line() + facet_wrap(~year)
-```
-```{r}
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```{r daily info}
-#taking the average of each variable by date
-daily_mean_temp <- df %>% group_by(date) %>% summarize(temp = mean(temp))
-daily_mean_vol <- traffic %>% group_by(date) %>% summarize(vol = mean(traffic_volume))
-daily_mean_rain <- traffic %>% group_by(date) %>% summarize(rain = mean(rain_1h))
-daily_mean_snow <- traffic %>% group_by(date) %>% summarize(snow = mean(snow_1h))
-daily_mean_cloud <- traffic %>% group_by(date) %>% summarize(cloud = mean(clouds_all))
-is_holiday <- df %>% group_by(date) %>% summarize(holiday = mean(holiday))
-daily_day <- traffic %>% group_by(date) %>% 
-```
-
-```{r weather}
-x <- traffic %>% group_by(date) %>% select(weather_main)
-
-daily_weather <- x %>% group_by(date) %>% summarize(weather = calculate_mode(weather_main))
-```
-
-```{r average df}
-avg <- merge(daily_weather, merge(is_holiday, merge(daily_mean_cloud, merge(daily_mean_snow, merge(daily_mean_rain,merge(daily_mean_temp, daily_mean_vol))))))
-```
-
-```{r avg format}
-avg %>% 
-  mutate(
-    holiday = ifelse(holiday != 0, 1, 0),
-  )
-```
-```{r sample}
-sample <- sample_n(df, 1000, replace = FALSE)
+#is it necessary to go by hour?? ??
 ```
