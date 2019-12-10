@@ -15,6 +15,7 @@ library(ggfortify)
 ```
 
 ```{r data process for nn}
+#collapse some of the variables actually further...skdjfljfl
 library(plyr)
 library(caret)
 dmy <- dummyVars(" ~ .", data = df, fullRank = TRUE)
@@ -61,11 +62,13 @@ library(neuralnet)
 # creating training and test set
 trainNN = scaled[index , ]
 testNN = scaled[-index , ]
-
+```
+```{r}
 # fit neural network
 set.seed(2)
-NN = neuralnet(traffic_volume ~  + protein + fat + sodium + fiber, trainNN, hidden = 3 , linear.output = T )
-
+NN = neuralnet(traffic_volume ~ holiday + temp + clouds_all + weather_main, trainNN, hidden = 3 , linear.output = T )
+```
+```{r}
 # plot neural network
 plot(NN)
 ```
