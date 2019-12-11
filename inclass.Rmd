@@ -1,0 +1,171 @@
+---
+title: "inclass"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r hournum to traffic vol}
+plot(seventeen$hournum, seventeen$traffic_volume)
+abline(lm(traffic_volume ~ hournum, data = seventeen))
+```
+```{r polynomial plot}
+lm <- lm(traffic_volume ~ hournum, data = df)
+pr <- lm(traffic_volume ~ poly(hournum, 2, raw = TRUE) + month, data = df)
+summary(pr)
+
+plot(df$hournum, df$traffic_volume)
+lines(sort(df$hournum), fitted(pr)[order(df$hournum)], col='red', type='b') 
+```
+```{r p2 residuals}
+df <- df %>% mutate(resid_pr = residuals(pr))
+
+ggplot(df, aes(x = hournum, y = resid_pr)) +
+  geom_point()
+```
+```{r}
+p2 <- lm(traffic_volume ~ poly(hournum, 2, raw = TRUE), data = df)
+summary(p2)
+poly_resid <- df %>% select(traffic_volume)
+poly_resid <- poly_resid %>% mutate(p2resid = residuals(p2))
+p4 <- lm(traffic_volume ~ poly(hournum, 4, raw = TRUE), data = df)
+summary(p4)
+poly_resid <- poly_resid %>% mutate(p4resid = residuals(p4))
+p6 <- lm(traffic_volume ~ poly(hournum, 6, raw = TRUE), data = df)
+summary(p6)
+poly_resid <- poly_resid %>% mutate(p6resid = residuals(p6))
+
+plot(df$hournum, df$traffic_volume)
+lines(sort(df$hournum), fitted(p2)[order(df$hournum)], col='red', type='b') 
+
+plot(df$hournum, df$traffic_volume)
+lines(sort(df$hournum), fitted(p4)[order(df$hournum)], col='red', type='b') 
+
+plot(df$hournum, df$traffic_volume)
+lines(sort(df$hournum), fitted(p6)[order(df$hournum)], col='red', type='b') 
+```
+```{r poly residuals}
+ggplot(poly_resid, aes(x = df$hournum, y = p2resid)) +
+  geom_point()
+
+ggplot(poly_resid, aes(x = df$hournum, y = p4resid)) +
+  geom_point()
+
+ggplot(poly_resid, aes(x = df$hournum, y = p6resid)) +
+  geom_point()
+```
+```{r poly density graph}
+ggplot(poly_resid, aes(x = p2resid)) +
+  geom_density()
+
+ggplot(poly_resid, aes(x = p4resid)) +
+  geom_density()
+
+ggplot(poly_resid, aes(x = p6resid)) +
+  geom_density()
+```
+```{r}
+k <- 5
+piece <- split(df[sample(nrow(df)),], 1:5)
+crossValResults <- data.frame(matrix(ncol = 3, nrow = 5))
+x <- c("p2","p4","p6")
+colnames(crossValResults) <- x
+#p2
+  crossValResults$p2 = sapply(piece, 
+       function(TestData){
+          testIndexes <- as.numeric(row.names(TestData))
+          
+          testData <- df[testIndexes, ]
+          trainData <- df[-testIndexes, ]
+          
+          poly <- lm(trainData$traffic_volume ~ poly(trainData$hournum,2, raw = TRUE), data = trainData)
+  
+          MSE = function(model,data){
+          N = nrow(testData)
+          return(sum((predict(model, data) - data$traffic_volume)^2)/N)
+          }
+          return(MSE(poly, testData))
+       })
+       
+#p4
+  crossValResults$p4 = sapply(piece, 
+       function(TestData){
+          testIndexes <- as.numeric(row.names(TestData))
+          
+          testData <- df[testIndexes, ]
+          trainData <- df[-testIndexes, ]
+          
+          poly <- lm(trainData$traffic_volume ~ poly(trainData$hournum, 4, raw = TRUE), data = trainData)
+  
+          MSE = function(model,data){
+          N = nrow(testData)
+          return(sum((predict(model, data) - data$traffic_volume)^2)/N)
+          }
+          return(MSE(poly, testData))
+       })
+  
+#p6
+  crossValResults$p6 = sapply(piece, 
+       function(TestData){
+          testIndexes <- as.numeric(row.names(TestData))
+          
+          testData <- df[testIndexes, ]
+          trainData <- df[-testIndexes, ]
+          
+          poly <- lm(trainData$traffic_volume ~ poly(trainData$hournum, 6, raw = TRUE), data = trainData)
+  
+          MSE = function(model,data){
+          N = nrow(testData)
+          return(sum((predict(model, data) - data$traffic_volume)^2)/N)
+          }
+          return(MSE(poly, testData))
+       })
+  
+cvErrorp2 = mean(crossValResults$p2) ; cvErrorp2
+cvErrorp4 = mean(crossValResults$p4) ; cvErrorp4
+cvErrorp6 = mean(crossValResults$p6) ; cvErrorp6
+```
+
+```{r tree}
+library(rpart)
+```
+
+```{r testing and training}
+rows <- sample(1:48204, 24102)
+testing <- df[rows,]
+training <- df[-rows,]
+```
+
+```{r bootstrap thing}
+bootstrapTrainingData = function(){
+        nObs = 1:nrow(d)
+        boostrap = d[sample(nObs,replace=TRUE),]
+        return(boostrap)
+}
+```
+
+```{r tree model thing}
+big <- rpart(traffic_volume ~ year + month + day + hournum + tod + weather_main + temp + holiday , data = training, method = "anova")
+printcp(big)
+plotcp(big)
+rsq.rpart(big)
+plot(big, uniform=TRUE,
+   main="Regression Tree for stuff ")
+text(big, use.n=TRUE, all=TRUE, cex=.8)
+```
+```{r testing}
+X = testing[,c("weather_main","hournum","temp","day")]
+X = testing[order(testing$traffic_volume),]
+predictions = predict(big,X)
+```
+
+```{r}
+plot(X$hournum,X$traffic_volume,xlab='stuff',ylab="volume",tck=0.01)
+lines(X$traffic_volume,predictions)
+```
+
+```{r}
+
+
+```

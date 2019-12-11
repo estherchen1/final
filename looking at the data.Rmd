@@ -216,6 +216,13 @@ plot(seventeen$temp, seventeen$traffic_volume)
 plot(eighteen$temp, eighteen$traffic_volume)
 ```
 ```{r}
+ggplot(df, aes(x = year, y = temp, group = year)) +
+  geom_boxplot()
+
+ggplot(df, aes(x = month, y = temp, group = month)) +
+  geom_boxplot()
+```
+```{r}
 ggplot(seventeen, aes(x = season, y = traffic_volume, group = season)) +
   geom_boxplot()
 ```
@@ -230,4 +237,79 @@ ggplot(sixteen, aes(X = hournum, y = traffic_volume, group = hournum)) +
   geom_boxplot()
 
 #is it necessary to go by hour?? ??
+```
+```{r}
+ggplot(df, aes(x = year, y = traffic_volume, group = year)) +
+  geom_boxplot()
+
+ggplot(df, aes(x = monthnum, y = traffic_volume, group = month)) +
+  geom_boxplot()
+
+ggplot(seventeen, aes(x = monthnum, y = traffic_volume, group = month)) +
+  geom_boxplot()
+```
+```{r}
+ggplot(df, aes(x = hournum, y = traffic_volume)) +
+  geom_point() +
+    facet_wrap(~day)
+```
+```{r}
+df_select <- df %>% filter(season == "Fall")
+ggplot(df_select, aes(x = hournum, y = traffic_volume)) +
+  geom_point() +
+  facet_wrap(~day)
+```
+```{r}
+df_select <- df %>% filter(season == "Winter")
+ggplot(df_select, aes(x = hournum, y = traffic_volume)) +
+  geom_point() +
+  facet_wrap(~day)
+```
+```{r}
+df_select <- df %>% filter(season == "Spring")
+ggplot(df_select, aes(x = hournum, y = traffic_volume)) +
+  geom_point() +
+  facet_wrap(~day)
+```
+```{r}
+df_select <- df %>% filter(season == "Summer")
+ggplot(df_select, aes(x = hournum, y = traffic_volume)) +
+  geom_point() +
+  facet_wrap(~day)
+```
+
+```{r}
+ggplot(twelve, aes(x = hournum, y = traffic_volume)) +
+  geom_point() +
+  facet_wrap(~day)
+```
+```{r}
+ggplot(thirteen, aes(x = hournum, y = traffic_volume)) +
+  geom_point() +
+  facet_wrap(~day)
+```
+```{r}
+ggplot(fourteen, aes(x = hournum, y = traffic_volume)) +
+  geom_point() +
+  facet_wrap(~day)
+```
+```{r}
+ggplot(fifteen, aes(x = hournum, y = traffic_volume)) +
+  geom_point() +
+  facet_wrap(~day)
+```
+```{r}
+ggplot(sixteen, aes(x = hournum, y = traffic_volume)) +
+  geom_point() +
+  facet_wrap(~day)
+```
+```{r}
+ggplot(seventeen, aes(x = hournum, y = traffic_volume)) +
+  geom_point() +
+  facet_wrap(~day)
+```
+```{r}
+ggplot(eighteen, aes(x = hournum, y = traffic_volume)) +
+  geom_point() +
+  facet_wrap(~day)
 ```
