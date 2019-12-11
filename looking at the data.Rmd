@@ -54,7 +54,7 @@ df$hour <- strftime(traffic$date_time, format="%H", tz = "CST")
 df$hournum <- as.numeric(df$hour)
 ```
 ```{r adding years}
-df$year <- strftime(traffic$date_time, format="%Y")
+df$year <- strftime(df$date_time, format="%Y")
 ```
 ```{r}
 df$month <- month(traffic$date_time)

@@ -24,7 +24,7 @@ df <- df %>% mutate(resid_pr = residuals(pr))
 ggplot(df, aes(x = hournum, y = resid_pr)) +
   geom_point()
 ```
-```{r}
+```{r poly summaries and graph}
 p2 <- lm(traffic_volume ~ poly(hournum, 2, raw = TRUE), data = df)
 summary(p2)
 poly_resid <- df %>% select(traffic_volume)
@@ -65,7 +65,7 @@ ggplot(poly_resid, aes(x = p4resid)) +
 ggplot(poly_resid, aes(x = p6resid)) +
   geom_density()
 ```
-```{r}
+```{r poly crossvals}
 k <- 5
 piece <- split(df[sample(nrow(df)),], 1:5)
 crossValResults <- data.frame(matrix(ncol = 3, nrow = 5))
@@ -160,12 +160,8 @@ X = testing[order(testing$traffic_volume),]
 predictions = predict(big,X)
 ```
 
-```{r}
+```{r prediction plot.. 0_0}
 plot(X$hournum,X$traffic_volume,xlab='stuff',ylab="volume",tck=0.01)
 lines(X$traffic_volume,predictions)
 ```
 
-```{r}
-
-
-```
