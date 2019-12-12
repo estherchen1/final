@@ -7,12 +7,12 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 ```{r hournum to traffic vol}
-plot(seventeen$hournum, seventeen$traffic_volume)
-abline(lm(traffic_volume ~ hournum, data = seventeen))
+plot(DT$day_num, DT$traffic_volume)
+abline(lm(traffic_volume ~ day_num, data = DT))
 ```
 ```{r polynomial plot}
-lm <- lm(traffic_volume ~ hournum, data = df)
-pr <- lm(traffic_volume ~ poly(hournum, 2, raw = TRUE) + month, data = df)
+lm <- lm(traffic_volume ~ hournum, data = DT)
+pr <- lm(traffic_volume ~ poly(hournum, 4, raw = TRUE) + poly(day_num, 2, raw = TRUE), data = DT)
 summary(pr)
 
 plot(df$hournum, df$traffic_volume)

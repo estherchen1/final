@@ -126,6 +126,7 @@ ggplot(df, aes(y = temp)) +
 ggplot(traffic, aes(x = weather_main)) +
   geom_bar() 
 ```
+
 ```{r weather description histogram}
 ggplot(traffic, aes(x = weather_description)) +
   geom_bar()
@@ -148,6 +149,10 @@ ggplot(traffic, aes(x=weather_main, y=traffic_volume, group=weather_main)) +
 
 ggplot(traffic, aes(x = weather_main, y = traffic_volume, group = weather_main)) +
   geom_bar(stat = "identity")
+```
+```{r}
+df %>% filter(weather_main == "Clouds") %>% summarise(mean = mean(traffic_volume))
+df %>% filter(weather_main == "Drizzle") %>% summarise(mean = mean(traffic_volume))
 ```
 ```{r weather desc and volume}
 ggplot(traffic, aes(x = weather_description, y = traffic_volume, group = weather_description)) +
@@ -179,13 +184,16 @@ ggplot(df, aes(x = tod, y = traffic_volume, group = tod)) +
 ggplot(df, aes(x = year, y = traffic_volume)) +
   geom_boxplot() 
 ```
+```{r}
+ggplot(df, aes(x = hournum, y = traffic_volume, group = hournum)) +
+  geom_boxplot()
+```
 
 ```{r}
 slr <- lm(traffic_volume ~ day, data = df)
 summary(slr)
 
 plot(df$day, df$traffic_volume)
-abline(lm(traffic_volume ~ day, data = df))
 ```
 ```{r}
 df$temp = ifelse(df$temp < -50, 0, df$temp)
@@ -313,3 +321,4 @@ ggplot(eighteen, aes(x = hournum, y = traffic_volume)) +
   geom_point() +
   facet_wrap(~day)
 ```
+

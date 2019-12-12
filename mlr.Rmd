@@ -28,7 +28,7 @@ datas[, type := rep(c("Real", "Fitted"), each = nrow(data_r))]
 ggplot(data = datas, aes(date_time, traffic_volume, group = type, colour = type)) +
   geom_line(size = 0.8) +
   theme_bw() +
-  labs(x = "Time", y = "Load (kW)",
+  labs(x = "Time", y = "Traffic Volume",
        title = "Fit from MLR")
 ```
 ```{r}
@@ -76,7 +76,7 @@ datas[, type := rep(c("Real", "Fitted"), each = nrow(data_r))]
 ggplot(data = datas, aes(date_time, traffic_volume, group = type, colour = type)) +
   geom_line(size = 0.8) +
   theme_bw() +
-  labs(x = "Time", y = "Load (kW)",
+  labs(x = "Time", y = "Traffic VOlume",
        title = "Fit from MLR")
 ```
 ```{r}
