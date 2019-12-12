@@ -7,7 +7,7 @@ output: html_document
 N <- nrow(data_r)
 window <- N / period # number of days in the train set
 # 1, ..., period, 1, ..., period - and so on for the daily season 
-# using feature "week_num" for the weekly season
+# using feature "day_num" for the weekly season
 matrix_train <- data.table(volume = data_r[, traffic_volume],
                            Daily = as.factor(rep(1:period, window)),
                            Weekly = as.factor(data_r[, day_num]))
