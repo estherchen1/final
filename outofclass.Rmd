@@ -15,33 +15,5 @@ library(ggfortify)
 library(caret)
 library(neuralnet)
 ```
-```{r}
-library(data.table)
-library(ggmap)
-library(gridExtra)
-library(forecast)
-```
-
-```{r forecasting}
-n<-dim(seventeen)[1]
-seventeen<-seventeen[1:(n-5),]
-ggplot(data = seventeen, aes(x = date_time, y = traffic_volume)) +
-  geom_line() + 
-  theme(panel.border = element_blank(),
-        panel.background = element_blank(),
-        panel.grid.minor = element_line(colour = "grey90"),
-        panel.grid.major = element_line(colour = "grey90"),
-        panel.grid.major.x = element_line(colour = "grey90"),
-        axis.text = element_text(size = 10),
-        axis.title = element_text(size = 12, face = "bold"),
-        strip.text = element_text(size = 9, face = "bold")) +
-  labs(x = "Date", y = "Traffic Volume")
-```
-
-```{r}
-#transform weekdays into numbers
-#store unique vars into another vector 
-#
-```
 
 

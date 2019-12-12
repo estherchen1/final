@@ -1,0 +1,132 @@
+---
+title: "gam"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(feather)
+library(data.table)
+library(mgcv)
+library(car)
+library(ggplot2)
+library(grid)
+library(animation)
+```
+
+```{r data table}
+DT <- as.data.table(df)
+gamdata <- DT[, day_num := as.integer(car::recode(day,
+    "'Monday'='1';'Tuesday'='2';'Wednesday'='3';'Thursday'='4';
+    'Friday'='5';'Saturday'='6';'Sunday'='7'"))]
+```
+```{r testing and training sets}
+set.seed(1)
+rows <- sample(1:48204, 24102)
+testing <- df[rows,]
+training <- df[-rows,]
+```
+```{r}
+n_date <- unique(DT[, date])
+n_weekdays <- unique(DT[, day])
+period <- 24
+```
+```{r}
+data_r <- DT[(date %in% n_date[90:104])]
+```
+```{r}
+N <- nrow(data_r) # number of observations in the train set
+window <- N / period # number of days in the train set
+matrix_gam <- data.table(Volume = data_r[, traffic_volume],
+                         Daily = rep(1:period, window),
+                         Weekly = data_r[, day_num])
+
+```
+```{r}
+gam_1 <- gam(Volume ~ s(Daily, bs = "cr", k = period) +
+               s(Weekly, bs = "ps", k = 7),
+             data = matrix_gam,
+             family = gaussian)
+```
+```{r}
+layout(matrix(1:2, nrow = 1))
+plot(gam_1, shade = TRUE)
+```
+```{r}
+summary(gam_1)
+```
+```{r}
+datas <- rbindlist(list(data_r[, .(traffic_volume, date_time)],
+                        data.table(value = gam_1$fitted.values,
+                                   data_time = data_r[, date_time])))
+datas[, type := c(rep("Real", nrow(data_r)), rep("Fitted", nrow(data_r)))]
+ 
+ggplot(data = datas, aes(date_time, traffic_volume, group = type, colour = type)) +
+  geom_line(size = 0.8) +
+  theme_bw() +
+  labs(x = "Time", y = "Traffic Volume",
+       title = "Fit from GAM n.1")
+```
+
+
+```{r}
+gam_2 <- gam(Volume ~ s(Daily, Weekly),
+             data = matrix_gam,
+             family = gaussian)
+
+summary(gam_2)$r.sq
+```
+```{r}
+datas <- rbindlist(list(data_r[, .(traffic_volume, date_time)],
+                        data.table(traffic_volume= gam_2$fitted.values,
+                                   data_time = data_r[, date_time])))
+datas[, type := c(rep("Real", nrow(data_r)), rep("Fitted", nrow(data_r)))]
+ 
+ggplot(data = datas, aes(date_time, traffic_volume, group = type, colour = type)) +
+  geom_line(size = 0.8) +
+  theme_bw() +
+  labs(x = "Time", y = "Traffic Volume",
+       title = "Fit from GAM n.2")
+```
+```{r}
+gam_3 <- gam(Volume ~ te(Daily, Weekly,
+                       bs = c("cr", "ps")),
+             data = matrix_gam,
+             family = gaussian)
+ 
+summary(gam_3)$r.sq
+```
+```{r}
+datas <- rbindlist(list(data_r[, .(traffic_volume, date_time)],
+                        data.table(traffic_volume = gam_3$fitted.values,
+                                   data_time = data_r[, date_time])))
+datas[, type := c(rep("Real", nrow(data_r)), rep("Fitted", nrow(data_r)))]
+ 
+ggplot(data = datas, aes(date_time, traffic_volume, group = type, colour = type)) +
+  geom_line(size = 0.8) +
+  theme_bw() +
+  labs(x = "Time", y = "Traffic Volume",
+       title = "Fit from GAM n.4")
+```
+
+```{r}
+gam_4 <- gam(Volume ~ te(Daily, Weekly,
+                        k = c(period, 7),
+                        bs = c("cr", "ps")),
+              data = matrix_gam,
+              family = gaussian)
+```
+```{r}
+datas <- rbindlist(list(data_r[, .(traffic_volume, date_time)],
+                        data.table(traffic_volume = gam_4$fitted.values,
+                                   data_time = data_r[, date_time])))
+datas[, type := c(rep("Real", nrow(data_r)), rep("Fitted", nrow(data_r)))]
+ 
+ggplot(data = datas, aes(date_time, traffic_volume, group = type, colour = type)) +
+  geom_line(size = 0.8) +
+  theme_bw() +
+  labs(x = "Time", y = "Traffic Volume",
+       title = "Fit from GAM n.4")
+```
+
+

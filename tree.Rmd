@@ -1,0 +1,15 @@
+---
+title: "tree"
+output: html_document
+---
+
+```{r tree}
+library(rpart)
+```
+
+```{r}
+tree_1 <- rpart(volume ~ ., data = matrix_train)
+tree_1$variable.importance
+```
+
+

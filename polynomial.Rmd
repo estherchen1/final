@@ -127,41 +127,9 @@ cvErrorp4 = mean(crossValResults$p4) ; cvErrorp4
 cvErrorp6 = mean(crossValResults$p6) ; cvErrorp6
 ```
 
-```{r tree}
-library(rpart)
+```{r}
+
+
 ```
 
-```{r testing and training}
-rows <- sample(1:48204, 24102)
-testing <- df[rows,]
-training <- df[-rows,]
-```
-
-```{r bootstrap thing}
-bootstrapTrainingData = function(){
-        nObs = 1:nrow(d)
-        boostrap = d[sample(nObs,replace=TRUE),]
-        return(boostrap)
-}
-```
-
-```{r tree model thing}
-big <- rpart(traffic_volume ~ year + month + day + hournum + tod + weather_main + temp + holiday , data = training, method = "anova")
-printcp(big)
-plotcp(big)
-rsq.rpart(big)
-plot(big, uniform=TRUE,
-   main="Regression Tree for stuff ")
-text(big, use.n=TRUE, all=TRUE, cex=.8)
-```
-```{r testing}
-X = testing[,c("weather_main","hournum","temp","day")]
-X = testing[order(testing$traffic_volume),]
-predictions = predict(big,X)
-```
-
-```{r prediction plot.. 0_0}
-plot(X$hournum,X$traffic_volume,xlab='stuff',ylab="volume",tck=0.01)
-lines(X$traffic_volume,predictions)
-```
 

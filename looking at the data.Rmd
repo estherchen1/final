@@ -219,7 +219,7 @@ plot(eighteen$temp, eighteen$traffic_volume)
 ggplot(df, aes(x = year, y = temp, group = year)) +
   geom_boxplot()
 
-ggplot(df, aes(x = month, y = temp, group = month)) +
+ggplot(df, aes(x = month, y = traffic_volume, group = month)) +
   geom_boxplot()
 ```
 ```{r}
