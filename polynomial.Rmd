@@ -3,16 +3,20 @@ title: "inclass"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r}
+library("data.table")
 ```
-```{r hournum to traffic vol}
-plot(DT$day_num, DT$traffic_volume)
-abline(lm(traffic_volume ~ day_num, data = DT))
+```{r}
+DT <- as.data.table(df)
+DT[, daynum := as.integer(as.factor(DT[, day]))]
+```
+```{r plot}
+plot(DT$hournum, DT$traffic_volume)
+abline(lm(traffic_volume ~ hournum, data = DT))
 ```
 ```{r polynomial plot}
 lm <- lm(traffic_volume ~ hournum, data = DT)
-pr <- lm(traffic_volume ~ poly(hournum, 4, raw = TRUE) + poly(day_num, 2, raw = TRUE), data = DT)
+pr <- lm(traffic_volume ~ poly(hournum, 4, raw = TRUE) + poly(daynum, 2, raw = TRUE), data = DT)
 summary(pr)
 
 plot(df$hournum, df$traffic_volume)

@@ -3,6 +3,7 @@ title: "MLR"
 output: html_document
 ---
 
+
 ```{r}
 N <- nrow(data_r)
 window <- N / period # number of days in the train set
