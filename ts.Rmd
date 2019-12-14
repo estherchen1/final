@@ -2,43 +2,12 @@
 title: "TS"
 output: html_document
 ---
-
 ```{r}
-#create dt with just date time and traffic volume
+library(data.table)
+library(tseries)
+library(forecast)
 ```
 
 ```{r}
-#plot data/check stationarity
-```
 
-
-```{r}
-#rolling statistics
-#window is daily or weekly
-```
-
-
-```{r}
-#plot rolling statistics
-```
-
-
-```{r}
-#dickey-fuller test
-```
-
-```{r}
-#estimating trend
-```
-
-```{r}
-#decompose
-```
-```{r}
-#acf, partial acf
-
-```
-
-```{r}
-#arima
 ```

@@ -3,90 +3,131 @@ title: "MLR"
 output: html_document
 ---
 
+```{r setup}
+library(data.table)
+library(tseries)
+library(forecast)
+library(TSA)
+```
+```{r}
+traffic_dt <- as.data.table(traffic_2)
+
+traffic_dt[, week_num := as.integer(car::recode(weekday,
+    "'Monday'='1';'Tuesday'='2';'Wednesday'='3';'Thursday'='4';
+    'Friday'='5';'Saturday'='6';'Sunday'='7'"))]
+
+traffic_dt <- traffic_dt[,c("date_time","traffic_volume","date","weekday","year","temp")]
+```
 
 ```{r}
-N <- nrow(data_r)
-window <- N / period # number of days in the train set
-# 1, ..., period, 1, ..., period - and so on for the daily season 
-# using feature "day_num" for the weekly season
-matrix_train <- data.table(volume = data_r[, traffic_volume],
-                           Daily = as.factor(rep(1:period, window)),
-                           Weekly = as.factor(data_r[, day_num]))
+ggplot(data = traffic_dt, aes(x = date, y = traffic_volume)) +
+  geom_line() + 
+  theme(panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.minor = element_line(colour = "grey90"),
+        panel.grid.major = element_line(colour = "grey90"),
+        panel.grid.major.x = element_line(colour = "grey90"),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12, face = "bold"),
+        strip.text = element_text(size = 9, face = "bold")) +
+  labs(x = "Date", y = "Traffic Volume")
 ```
-```{r}
-lm_m_1 <- lm(volume ~ 0 + ., data = matrix_train)
-smmr_1 <- summary(lm_m_1)
-paste("R-squared: ",
-      round(smmr_1$r.squared, 3),
-      ", p-value of F test: ",
-      1-pf(smmr_1$fstatistic[1], smmr_1$fstatistic[2], smmr_1$fstatistic[3]))
-```
-```{r}
-datas <- rbindlist(list(data_r[, .(traffic_volume, date_time)],
-                        data.table(traffic_volume = lm_m_1$fitted.values, data_time = data_r[, date_time])))
-datas[, type := rep(c("Real", "Fitted"), each = nrow(data_r))]
- 
-ggplot(data = datas, aes(date_time, traffic_volume, group = type, colour = type)) +
-  geom_line(size = 0.8) +
-  theme_bw() +
-  labs(x = "Time", y = "Traffic Volume",
-       title = "Fit from MLR")
-```
-```{r}
-ggplot(data = data.table(Fitted_values = lm_m_1$fitted.values,
-                         Residuals = lm_m_1$residuals),
-       aes(Fitted_values, Residuals)) +
-  geom_point(size = 1.7) +
-  geom_smooth() +
-  geom_hline(yintercept = 0, color = "red", size = 1) +
-  labs(title = "Fitted values vs Residuals")
-```
-```{r}
-ggQQ <- function(lm){
-  # extract standardized residuals from the fit
-  d <- data.frame(std.resid = rstandard(lm))
-  # calculate 1Q/4Q line
-  y <- quantile(d$std.resid[!is.na(d$std.resid)], c(0.25, 0.75))
-  x <- qnorm(c(0.25, 0.75))
-  slope <- diff(y)/diff(x)
-  int <- y[1L] - slope * x[1L]
-  
-  p <- ggplot(data = d, aes(sample = std.resid)) +
-    stat_qq(shape = 1, size = 3) +         # open circles
-    labs(title = "Normal Q-Q",             # plot title
-         x = "Theoretical Quantiles",      # x-axis label
-         y = "Standardized Residuals") +   # y-axis label
-    geom_abline(slope = slope, intercept = int, linetype = "dashed",
-                size = 1, col = "firebrick1") # dashed reference line
-  return(p)
-}
-```
-```{r}
-ggQQ(lm_m_1)
-```
-```{r}
-lm_m_2 <- lm(volume ~ 0 + Daily + Weekly + Daily:Weekly,
-             data = matrix_train)
-c(Previous = summary(lm_m_1)$r.squared, New = summary(lm_m_2)$r.squared)
-```
-```{r}
-datas <- rbindlist(list(data_r[, .(traffic_volume, date_time)],
-                        data.table(traffic_volume = lm_m_2$fitted.values, data_time = data_r[, date_time])))
-datas[, type := rep(c("Real", "Fitted"), each = nrow(data_r))]
- 
-ggplot(data = datas, aes(date_time, traffic_volume, group = type, colour = type)) +
-  geom_line(size = 0.8) +
-  theme_bw() +
-  labs(x = "Time", y = "Traffic VOlume",
-       title = "Fit from MLR")
-```
-```{r}
-ggplot(data = data.table(Fitted_values = lm_m_2$fitted.values,
-                         Residuals = lm_m_2$residuals),
-       aes(Fitted_values, Residuals)) +
-  geom_point(size = 1.7) +
-  geom_hline(yintercept = 0, color = "red", size = 1) +
-  labs(title = "Fitted values vs Residuals")
+```{r data prep}
+traffic_dt <- traffic_dt[, week_num := as.integer(as.factor(traffic_dt[, weekday]))]
 ```
 
+```{r}
+train_data <- traffic_dt[(traffic_dt$year > 2014 & traffic_dt$year < 2017)]
 
+n_date <- unique(train_data[, date])
+n_weekdays <- unique(train_data[, weekday])
+period <- 24
+
+data_r <- train_data[(date %in% n_date[20:385])]
+```
+
+```{r}
+ggplot(data_r, aes(date_time, traffic_volume)) +
+  geom_line() +
+  theme(panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.minor = element_line(colour = "grey90"),
+        panel.grid.major = element_line(colour = "grey90"),
+        panel.grid.major.x = element_line(colour = "grey90"),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12, face = "bold")) +
+  labs(x = "Date", y = "Traffic Volume")
+```
+
+```{r}
+ggplot(data_r, aes(date_time, temp)) +
+  geom_line() +
+  theme(panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.minor = element_line(colour = "grey90"),
+        panel.grid.major = element_line(colour = "grey90"),
+        panel.grid.major.x = element_line(colour = "grey90"),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12, face = "bold")) +
+  labs(x = "Date", y = "Temperature (C)")
+```
+
+```{r}
+qplot(temp, traffic_volume, data=data_r) +
+  ylab("Traffic Volume") + xlab("Temperature (C)")
+```
+```{r}
+data_s <- train_data[(date %in% n_date[20:21])]
+
+data_s_time <- data_s[,c("date_time","traffic_volume")] 
+ts_1 <- ts(data_s_time)
+gglagplot(ts_1)
+```
+```{r}
+data_s <- train_data[(date %in% n_date[20:350])]
+
+data_s_time <- data_s[,c("date_time","traffic_volume")] 
+ts_1 <- ts(data_s_time)
+ggAcf(ts_1)
+```
+```{r}
+adf.test(data_s_time$traffic_volume)
+```
+```{r}
+# p <- periodogram(data_s_time$traffic_volume)
+# data.table(period=1/p$freq, spec=p$spec)[order(-spec)][1:2]
+```
+
+```{r}
+ggplot(data_s_time, aes(x = date_time, y = traffic_volume)) +
+  geom_line() +
+  xlab("Day") + ylab("Traffic Volume") +
+  ggtitle("Traffic Volume Hourly")
+```
+```{r}
+n_ts_1 <- naive(ts_1)
+
+res <- residuals(n_ts_1)
+
+autoplot(res) + 
+  xlab("Day") + ylab("") +
+  ggtitle("Residuals from naïve method")
+```
+
+```{r}
+library(zoo)
+library(lattice)
+
+
+z <- read.zoo(data_s_time,  header = TRUE, tz = "CST")
+xyplot(z)
+
+zAgg <- aggregate(z,  by = as.yearmon,  FUN = mean)
+
+
+plot(zAgg, xaxt = "n")
+
+tt <- time(zAgg)
+m <- format(tt, "%m")
+axis(side = 1, at = tt, labels = ifelse(m == "01", trunc(tt), m), cex.axis = .7)
+```
