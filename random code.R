@@ -59,47 +59,6 @@ NN = neuralnet(traffic_volume ~ temp, data = trainNN)
 plot(NN)
 ```
 
-```{r arima time series????}
-voltime <- seventeen %>% filter(season == "Fall") %>% select(date_time, traffic_volume)
-volts <- ts(voltime)
-```
-
-```{r}
-autoplot(volts)
-```
-```{r testing and training}
-data_train <- DT[date %in% n_date[43:63]]
-data_test <- DT[date %in% n_date[64]]
-```
-```{r}
-averages <- data.table(traffic_volume = rep(sapply(0:2, function(i)
-  mean(data_train[((i*period*7)+1):((i+1)*period*7), traffic_volume])),
-  each = period * 7),
-  date_time = data_train$date_time)
-
-ggplot(data_train, aes(date_time, traffic_volume)) +
-  geom_line() +
-  geom_line(data = averages, aes(date_time, traffic_volume),
-            linetype = 5, alpha = 0.75, size = 1.2, color = "firebrick2") +
-  labs(x = "Date", y = "Traffic Volume") 
-```
-
-```{r}
-data_ts <- ts(data_train$traffic_volume, freq = period * 7)
-decomp_ts <- stl(data_ts, s.window = "periodic", robust = TRUE)$time.series
-
-decomp_stl <- data.table(Load = c(data_train$traffic_volume, as.numeric(decomp_ts)),
-                         Date = rep(data_train[,date_time], ncol(decomp_ts)+1),
-                         Type = factor(rep(c("original data", colnames(decomp_ts)),
-                                           each = nrow(decomp_ts)),
-                                       levels = c("original data", colnames(decomp_ts))))
-
-ggplot(decomp_stl, aes(x = Date, y = Load)) +
-  geom_line() + 
-  facet_grid(Type ~ ., scales = "free_y", switch = "y") +
-  labs(x = "Date", y = NULL,
-       title = "Time Series Decomposition by STL")
-```
 
 
 ```{r traindata}

@@ -33,9 +33,6 @@ ggAcf(ts_1)
 ```{r}
 adf.test(data_s_time$traffic_volume)
 ```
-```{r}
-
-```
 
 ```{r}
 str(train_data)
@@ -46,25 +43,22 @@ x <- ts(ts_tr)
 
 ndiffs(z)
 
-p <- periodogram(ts_tr$traffic_volume)
-data.table(period=1/p$freq, spec=p$spec)[order(-spec)][1:2]
+y <- ts(z[1:168])
 
-y <- ts(z[1:490])
-
-y.te <- z[491:550]
+y.te <- z[169:336]
 
 fit0 <- auto.arima(y)
 (bestfit <- list(aicc=fit0$aicc, i=0, j=0, fit=fit0))
 
-fc0 <- forecast(fit0, h=60)
+fc0 <- forecast(fit0, h=168)
 plot(fc0)
 ```
 ```{r}
 for(i in 1:3) {
   for (j in 1:3){
-    z1 <- fourier(ts(y, frequency=30), K=i)
-    z2 <- fourier(ts(y, frequency=23), K=j)
-    fit <- auto.arima(y, xreg=cbind(z1, z2), seasonal=F)
+    z1 <- fourier(ts(y, frequency=7), K=i)
+    z2 <- fourier(ts(y, frequency=12), K=j)
+    fit <- auto.arima(y, xreg=cbind(z1, z2), seasonal= TRUE)
     if(fit$aicc < bestfit$aicc) {
       bestfit <- list(aicc=fit$aicc, i=i, j=j, fit=fit)
     }
@@ -73,23 +67,21 @@ for(i in 1:3) {
 bestfit
 ```
 ```{r}
-
+fc <- forecast(bestfit$fit, 
+               xreg=cbind(
+                 fourier(ts(y, frequency=7), K=bestfit$i, h=60),
+                 fourier(ts(y, frequency=365), K=bestfit$j, h=60)))
+plot(fc)
 
 fc <- forecast(bestfit$fit, 
                xreg=cbind(
-                 fourier(ts(y, frequency=30), K=bestfit$i, h=60),
-                 fourier(ts(y, frequency=23), K=bestfit$j, h=60)))
+                 fourier(ts(y, frequency=30), K=bestfit$i, h=60)))
 plot(fc)
-
 
 ```
 ```{r}
-
-
 fc.tbats <- forecast(tbats(y, seasonal.periods=c(30, 23)), h=60)
 plot(fc.tbats)
-
-
 ```
 ```{r}
 accuracy(fc0, y.te)
@@ -112,5 +104,162 @@ plot(as.ts(x))
 plot(fc0)
 plot(fc)
 plot(fc.tbats)
+```
+```{r arima time series????}
+traffic_dt[, date_time := ymd_hms(traffic_dt[["date"]])]
+traffic_dt[, date := as.Date(traffic_dt[["date"]], "%Y-%m-%d")]
+traffic_dt[, ':='(timestamp = NULL, estimated = NULL, anomaly = NULL)]
+str(traffic_dt)
+
+sd_dt <- traffic[,c("date","traffic_volume","date_time")]
+sd_dt$date_time = traffic_dt$date_time
+num_date <- sd_dt[, .N, .(date)]
+num_date
+
+table(num_date[, N])
+
+sd_dt <- sd_dt[!date %in% num_date[c(1,367), date]]
+
+ggplot(sd_dt[, .(traffic_volume, date)], aes(date, traffic_volume)) +
+  geom_line() +
+  theme(panel.border = element_blank(), panel.background = element_blank(),
+        panel.grid.minor = element_line(colour = "grey90"),
+        panel.grid.major = element_line(colour = "grey90"), 
+        panel.grid.major.x = element_line(colour = "grey90"),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12, face = "bold"),
+        strip.text = element_text(size = 12, face = "bold")) +
+  labs(x = "Date", y = "Traffic Volume")
+```
+```{r}
+DT_agg <- as.data.table(aggregate(sd_dt[, .(traffic_volume)], by = sd_dt[, .(date_time)],
+                                  FUN = sum, simplify = TRUE))
+ggplot(DT_agg, aes(date_time, traffic_volume)) +
+  geom_line() +
+  theme(panel.border = element_blank(), panel.background = element_blank(),
+        panel.grid.minor = element_line(colour = "grey90"),
+        panel.grid.major = element_line(colour = "grey90"),
+        panel.grid.major.x = element_line(colour = "grey90"),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12, face = "bold")) +
+  labs(x = "Date", y = "Traffic Volume")
+```
+```{r}
+Med_Mad <- DT_agg[, .(Med = median(traffic_volume), Mad = mad(traffic_volume)),
+                  by = (seq(nrow(DT_agg)) - 1) %% 24]
+ggplot(Med_Mad, aes(x = seq, Med)) + 
+  geom_line(size = 0.9) +
+  geom_ribbon(data = Med_Mad, aes(ymin = Med - Mad, ymax = Med + Mad),
+              fill = "firebrick2", alpha = 0.3) +
+  theme(title = element_text(size = 14),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12, face = "bold")) +
+  labs(title = "Median daily profile +- deviation (MAD)") +
+  labs(x = "Time", y = "Traffic Volume")
+```
+
+```{r}
+Med_Mad_Week <- DT_agg[, .(Med = median(traffic_volume), Mad = mad(traffic_volume)),
+                       by = (seq(nrow(DT_agg)) - 1) %% (24*7)]
+ggplot(Med_Mad_Week, aes(x = seq, Med)) + 
+  geom_line(size = 0.9) + 
+  geom_ribbon(data = Med_Mad_Week, aes(ymin = Med - Mad, ymax = Med + Mad),
+              fill = "firebrick2", alpha = 0.3) +
+  geom_vline(xintercept = c(47, 47+(48*3), 47+(48*4), 47+(48*5)), linetype = 2, size = 1) +
+  theme(title = element_text(size = 14),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12, face = "bold")) +
+  labs(title = "Median weekly profile +- deviation (MAD)") +
+  labs(x = "Time", y = "Traffic Volume")
+```
+
+```{r}
+sd_dt[, week := weekdays(date_time)]
+DT_agg[, ':='(week = weekdays(date), date = as.Date(date))]
+unique(DT_agg[, week])
+```
+```{r}
+n_weekdays <- unique(DT_agg[, week])
+n_date <- unique(DT_agg[, date])
+period <- 24
+```
+
+```{r}
+# STL + ARIMA
+stlARIMAPred <- function(Y, period = 24){
+  ts_Y <- ts(Y, start = 0, freq = period)
+  dekom <- stl(ts_Y, s.window = 7, robust = FALSE)
+  arima <- forecast(dekom, h = period, method = "arima")
+  return(as.vector(arima$mean))
+}
+# STL + EXP
+stlEXPPred <- function(Y, period = 24){
+  ts_Y <- ts(Y, start = 0, freq = period)
+  dekom <- stl(ts_Y, s.window = 7, robust = FALSE)
+  expo <- forecast(dekom, h = period, method = "ets", etsmodel = "ZZN")
+  return(as.vector(expo$mean))
+}
+```
+
+```{r}
+predictWeek <- function(data, set_of_date, FUN, train_win = 6){
+ 
+ for_mon <- FUN(data[(week == n_weekdays[1] & date %in% set_of_date), traffic_volume])
+ seq_tuethu <- data[(week %in% n_weekdays[2:4] & date %in% set_of_date), traffic_volume]
+ for_tuethu <- as.vector(sapply(2:0, function(j)
+   FUN(seq_tuethu[(length(seq_tuethu)-(period*j)+1-(train_win*period)):(length(seq_tuethu)-(period*j))])))
+ for_fri <- FUN(data[(week == n_weekdays[5] & date %in% set_of_date), traffic_volume])
+ for_sat <- FUN(data[(week == n_weekdays[6] & date %in% set_of_date), traffic_volume])
+ for_sun <- FUN(data[(week == n_weekdays[7] & date %in% set_of_date), traffic_volume])
+ 
+ return(c(for_mon, for_tuethu, for_fri, for_sat, for_sun))
+}
+```
+
+```{r}
+mape <- function(real, pred){
+  return(100 * mean(abs((real - pred)/real)))
+}
+```
+```{r}
+for_week_arima <- predictWeek(DT_agg, n_date[56:84], stlARIMAPred) # forecast for one week
+for_week_exp <- predictWeek(DT_agg, n_date[56:84], stlEXPPred)
+real_week <- DT_agg[date %in% n_date[85:91], value] # real consumption
+c(ARIMA = mape(real_week, for_week_arima),
+  EXP = mape(real_week, for_week_exp))
+```
+
+```{r testing and training}
+data_train <- DT[date %in% n_date[43:63]]
+data_test <- DT[date %in% n_date[64]]
+```
+```{r}
+averages <- data.table(traffic_volume = rep(sapply(0:2, function(i)
+  mean(data_train[((i*period*7)+1):((i+1)*period*7), traffic_volume])),
+  each = period * 7),
+  date_time = data_train$date_time)
+
+ggplot(data_train, aes(date_time, traffic_volume)) +
+  geom_line() +
+  geom_line(data = averages, aes(date_time, traffic_volume),
+            linetype = 5, alpha = 0.75, size = 1.2, color = "firebrick2") +
+  labs(x = "Date", y = "Traffic Volume") 
+```
+
+```{r}
+data_ts <- ts(data_train$traffic_volume, freq = period * 7)
+decomp_ts <- stl(data_ts, s.window = "periodic", robust = TRUE)$time.series
+
+decomp_stl <- data.table(Load = c(data_train$traffic_volume, as.numeric(decomp_ts)),
+                         Date = rep(data_train[,date_time], ncol(decomp_ts)+1),
+                         Type = factor(rep(c("original data", colnames(decomp_ts)),
+                                           each = nrow(decomp_ts)),
+                                       levels = c("original data", colnames(decomp_ts))))
+
+ggplot(decomp_stl, aes(x = Date, y = Load)) +
+  geom_line() + 
+  facet_grid(Type ~ ., scales = "free_y", switch = "y") +
+  labs(x = "Date", y = NULL,
+       title = "Time Series Decomposition by STL")
 ```
 
