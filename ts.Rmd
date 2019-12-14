@@ -34,12 +34,83 @@ ggAcf(ts_1)
 adf.test(data_s_time$traffic_volume)
 ```
 ```{r}
-p <- periodogram(data_s_time$traffic_volume)
-data.table(period=1/p$freq, spec=p$spec)[order(-spec)][1:2]
+
 ```
 
 ```{r}
-train_data <- 
+str(train_data)
 
+ts_tr <- train_data[,c("date_time","traffic_volume")]
+
+x <- ts(ts_tr)
+
+ndiffs(z)
+
+p <- periodogram(ts_tr$traffic_volume)
+data.table(period=1/p$freq, spec=p$spec)[order(-spec)][1:2]
+
+y <- ts(z[1:490])
+
+y.te <- z[491:550]
+
+fit0 <- auto.arima(y)
+(bestfit <- list(aicc=fit0$aicc, i=0, j=0, fit=fit0))
+
+fc0 <- forecast(fit0, h=60)
+plot(fc0)
+```
+```{r}
+for(i in 1:3) {
+  for (j in 1:3){
+    z1 <- fourier(ts(y, frequency=30), K=i)
+    z2 <- fourier(ts(y, frequency=23), K=j)
+    fit <- auto.arima(y, xreg=cbind(z1, z2), seasonal=F)
+    if(fit$aicc < bestfit$aicc) {
+      bestfit <- list(aicc=fit$aicc, i=i, j=j, fit=fit)
+    }
+  }
+}
+bestfit
+```
+```{r}
+
+
+fc <- forecast(bestfit$fit, 
+               xreg=cbind(
+                 fourier(ts(y, frequency=30), K=bestfit$i, h=60),
+                 fourier(ts(y, frequency=23), K=bestfit$j, h=60)))
+plot(fc)
+
+
+```
+```{r}
+
+
+fc.tbats <- forecast(tbats(y, seasonal.periods=c(30, 23)), h=60)
+plot(fc.tbats)
+
+
+```
+```{r}
+accuracy(fc0, y.te)
+accuracy(fc, y.te)
+accuracy(fc.tbats, y.te)
+```
+```{r}
+smape <- function(act, fc){
+  pred <- as.vector(fc$mean)
+  sm <- abs(act - pred) / (abs(act) + abs(pred) + 1e-12)
+  200 * mean(sm, na.rm=T)
+}
+smape(y.te, fc0)
+smape(y.te, fc)
+smape(y.te, fc.tbats)
+```
+```{r}
+par(mfrow=c(4,1))
+plot(as.ts(x))
+plot(fc0)
+plot(fc)
+plot(fc.tbats)
 ```
 
