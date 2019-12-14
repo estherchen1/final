@@ -105,13 +105,13 @@ ggplot(data_s_time, aes(x = date_time, y = traffic_volume)) +
   ggtitle("Traffic Volume Hourly")
 ```
 ```{r}
-n_ts_1 <- naive(ts_1)
-
-res <- residuals(n_ts_1)
-
-autoplot(res) + 
-  xlab("Day") + ylab("") +
-  ggtitle("Residuals from naïve method")
+# n_ts_1 <- naive(ts_1)
+# 
+# res <- residuals(n_ts_1)
+# 
+# autoplot(res) + 
+#   xlab("Day") + ylab("") +
+#   ggtitle("Residuals from naïve method")
 ```
 
 ```{r}
@@ -131,3 +131,87 @@ tt <- time(zAgg)
 m <- format(tt, "%m")
 axis(side = 1, at = tt, labels = ifelse(m == "01", trunc(tt), m), cex.axis = .7)
 ```
+```{r}
+n_date <- unique(data_s[, date])
+n_weekdays <- unique(data_s[, weekday])
+period <- 24
+```
+
+```{r}
+data_t <- train_data[(date %in% n_date[57:70])]
+
+ggplot(data_t, aes(date_time, traffic_volume)) +
+  geom_line() +
+  theme(panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.minor = element_line(colour = "grey90"),
+        panel.grid.major = element_line(colour = "grey90"),
+        panel.grid.major.x = element_line(colour = "grey90"),
+        axis.text = element_text(size = 10),
+        axis.title = element_text(size = 12, face = "bold")) +
+  labs(x = "Date", y = "Traffic_Volume")
+```
+```{r}
+N <- nrow(data_t)
+window <- N / period # number of days in the train set
+# 1, ..., period, 1, ..., period - and so on for the daily season 
+# using feature "week_num" for the weekly season
+matrix_train <- data.table(traffic_volume = data_t[, traffic_volume],
+                           Daily = as.factor(rep(1:period, window)),
+                           Weekly = as.factor(data_t[, week_num]))
+```
+```{r}
+lm_m_1 <- lm(traffic_volume ~ 0 + ., data = matrix_train)
+
+smmr_1 <- summary(lm_m_1)
+paste("R-squared: ",
+      round(smmr_1$r.squared, 3),
+      ", p-value of F test: ",
+      1-pf(smmr_1$fstatistic[1], smmr_1$fstatistic[2], smmr_1$fstatistic[3]))
+```
+```{r}
+datas <- rbindlist(list(data_t[, .(traffic_volume, date_time)],
+                        data.table(traffic_volume = lm_m_1$fitted.values, data_time = data_t[, date_time])))
+datas[, type := rep(c("Real", "Fitted"), each = nrow(data_t))]
+ 
+ggplot(data = datas, aes(date_time, traffic_volume, group = type, colour = type)) +
+  geom_line(size = 0.8) +
+  theme_bw() +
+  labs(x = "Time", y = "Traffic Volume",
+       title = "Fit from MLR")
+```
+```{r}
+ggplot(data = data.table(Fitted_values = lm_m_1$fitted.values,
+                         Residuals = lm_m_1$residuals),
+       aes(Fitted_values, Residuals)) +
+  geom_point(size = 1.7) +
+  geom_smooth() +
+  geom_hline(yintercept = 0, color = "red", size = 1) +
+  labs(title = "Fitted values vs Residuals")
+```
+```{r}
+z <- ts(z)
+
+volume_fit <- tslm(z ~ temp, data = data_s)
+fcast <- forecast(volume_fit)
+autoplot(fcast) +
+  ggtitle("Forecasts of beer production using regression") +
+  xlab("Year") + ylab("megalitres")
+```
+```{r}
+fit_1 <- tslm(z ~ temp, data = data_s)
+h <- 4
+fcast.ave <- forecast(fit_1,
+  newdata = data.frame(temp = rep(mean(data_s[,"temp"]), h)))
+fcast.up <- forecast(fit.cons,
+  newdata = data.frame(Income = rep(5, h)))
+autoplot(uschange[, "Consumption"]) +
+  ylab("% change in US consumption") +
+  autolayer(fcast.ave, series = "Average increase",
+    PI = TRUE) +
+  autolayer(fcast.up, series = "Extreme increase",
+    PI = TRUE) +
+  guides(colour = guide_legend(title = "Scenario"))
+```
+
+

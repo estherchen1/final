@@ -1,0 +1,32 @@
+---
+title: "averages"
+author: "esther"
+date: "12/14/2019"
+output: html_document
+---
+
+```{r daily}
+daily_mean_temp <- traffic_2 %>% group_by(date) %>% summarize(temp = mean(temp))
+daily_mean_vol <- traffic_2 %>% group_by(date) %>% summarize(vol = mean(traffic_volume))
+daily_mean_rain <- traffic_2 %>% group_by(date) %>% summarize(rain = mean(rain_1h))
+daily_mean_snow <- traffic_2 %>% group_by(date) %>% summarize(snow = mean(snow_1h))
+daily_mean_cloud <- traffic_2 %>% group_by(date) %>% summarize(cloud = mean(clouds_all))
+is_holiday <- traffic_2 %>% group_by(date) %>% summarize(holiday = mean(holiday))
+```
+
+```{r weather}
+x <- traffic_2 %>% group_by(date) %>% select(weather_main)
+
+daily_weather <- x %>% group_by(date) %>% summarize(weather = calculate_mode(weather_main))
+```
+
+```{r average df}
+avg <- merge(daily_weather, merge(is_holiday, merge(daily_mean_cloud, merge(daily_mean_snow, merge(daily_mean_rain,merge(daily_mean_temp, daily_mean_vol))))))
+```
+
+```{r avg format}
+avg %>% 
+  mutate(
+    holiday = ifelse(holiday != 0, 1, 0),
+  )
+```
