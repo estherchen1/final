@@ -37,7 +37,7 @@ traffic_dt <- traffic_dt[, week_num := as.integer(as.factor(traffic_dt[, weekday
 ```
 
 ```{r}
-train_data <- traffic_dt[(traffic_dt$year > 2014 & traffic_dt$year < 2017)]
+train_data <- traffic_dt[(traffic_dt$year > 2014 & traffic_dt$year < 2018)]
 
 n_date <- unique(train_data[, date])
 n_weekdays <- unique(train_data[, weekday])
@@ -72,31 +72,7 @@ ggplot(data_r, aes(date_time, temp)) +
   labs(x = "Date", y = "Temperature (C)")
 ```
 
-```{r}
-qplot(temp, traffic_volume, data=data_r) +
-  ylab("Traffic Volume") + xlab("Temperature (C)")
-```
-```{r}
-data_s <- train_data[(date %in% n_date[20:21])]
 
-data_s_time <- data_s[,c("date_time","traffic_volume")] 
-ts_1 <- ts(data_s_time)
-gglagplot(ts_1)
-```
-```{r}
-data_s <- train_data[(date %in% n_date[20:350])]
-
-data_s_time <- data_s[,c("date_time","traffic_volume")] 
-ts_1 <- ts(data_s_time)
-ggAcf(ts_1)
-```
-```{r}
-adf.test(data_s_time$traffic_volume)
-```
-```{r}
-# p <- periodogram(data_s_time$traffic_volume)
-# data.table(period=1/p$freq, spec=p$spec)[order(-spec)][1:2]
-```
 
 ```{r}
 ggplot(data_s_time, aes(x = date_time, y = traffic_volume)) +
@@ -131,9 +107,110 @@ tt <- time(zAgg)
 m <- format(tt, "%m")
 axis(side = 1, at = tt, labels = ifelse(m == "01", trunc(tt), m), cex.axis = .7)
 ```
+
 ```{r}
-n_date <- unique(data_s[, date])
-n_weekdays <- unique(data_s[, weekday])
+z <- ts(z)
+
+
+# volume_fit <- tslm(z ~ , data = data_s)
+# fcast <- forecast(volume_fit)
+# autoplot(fcast) +
+#   ggtitle("Forecasts of beer production using regression") +
+#   xlab("Year") + ylab("megalitres")
+```
+
+```{r}
+data_s <- mutate(data_s, month_year = paste(year(date), formatC(month(date), width = 2, flag = "0")))
+
+data_s <- mutate(data_s, year_day = paste(year(date),formatC(month(date), width = 2, flag = "0"), formatC(day(date),width = 2, flag = "0")))
+
+data_s <- mutate(data_s, week = week(date))
+
+data_s <- mutate(data_s, year = year(date))
+
+data_s$year <- as.factor(data_s$year)
+
+data_s_2 <- data_s[,c("date","traffic_volume","month_year","year_day","week","year")]
+
+str(data_s_2)
+```
+```{r}
+vol_month <- aggregate(data_s_2$traffic_volume, by = list(data_s_2$month_year), FUN = function(x) mean(x, na.rm=T))
+
+my_ts <- ts(vol_month$x, frequency=12, start = c(2015, 06), end = c(2017, 06))
+plot(my_ts)
+```
+```{r}
+my_df_ts <- data.frame(traffic_volume = my_ts, as.numeric(time(my_ts)))
+names(my_df_ts) <- c("traffic_volume", "time")
+
+mymodel <- tslm(traffic_volume~season,my_df_ts)
+
+my_fc <- forecast(mymodel,h=9, level = c(80))
+autoplot(my_fc)
+
+my_ts_2 <- ts(vol_month_te$x, frequency=12, start = c(2016, 06), end = c(2018, 03))
+plot(my_ts_2)
+```
+```{r}
+# data_te <- train_data[(date %in% n_date[367:600])]
+# 
+# data_te <- mutate(data_te, month_year = paste(year(date), formatC(month(date), width = 2, flag = "0")))
+# 
+# data_te <- mutate(data_te, year_day = paste(year(date),formatC(month(date), width = 2, flag = "0"), formatC(day(date),width = 2, flag = "0")))
+# 
+# data_te <- mutate(data_te, week = week(date))
+# 
+# data_te <- mutate(data_te, year = year(date))
+# 
+# data_te$year <- as.factor(data_te$year)
+# 
+# data_te_2 <- data_te[,c("date","traffic_volume","month_year","year_day","week","year")]
+# 
+# str(data_s_2)
+# 
+# vol_month_te <- aggregate(data_te_2$traffic_volume, by = list(data_te_2$month_year), FUN = function(x) mean(x, na.rm=T))
+# 
+# my_ts_2 <- ts(vol_month_te$x, frequency=12, start = c(2016, 04), end = c(2017, 01))
+# # plot(my_ts_2)
+# # lines(fitted(my_fc),col="blue")
+# vol_month_te$fitted <- fitted(my_fc)
+# 
+# ggplot(data_te_2, aes(x = date, y = traffic_volume)) +
+#   geom_line(col='red') +
+#   geom_line(aes(y=fitted),col='blue')
+```
+
+```{r}
+vol_day <- aggregate(data_s_2$traffic_volume, by = list(data_s_2$week), FUN = function(x) mean(x, na.rm=T))
+
+my_ts_3 <- ts(vol_day$x, frequency=12, start = c(2015, 06), end = c(2017, 06))
+plot(my_ts_3)
+
+my_df_ts_2 <- data.frame(traffic_volume = my_ts_3, as.numeric(time(my_ts_3)))
+names(my_df_ts_2) <- c("traffic_volume", "time")
+
+mymodel_2 <- tslm(traffic_volume~season,my_df_ts_2)
+
+my_fc_2 <- forecast(mymodel_2,h=9, level = c(80))
+autoplot(my_fc)
+
+my_ts_4 <- ts(vol_day$x, frequency=12, start = c(2016, 06), end = c(2018, 03))
+plot(my_ts_4)
+```
+
+```{r}
+ggplot(data = data.table(Fitted_values = mymodel$fitted.values,
+                         Residuals = mymodel$residuals),
+       aes(Fitted_values, Residuals)) +
+  geom_point(size = 1.7) +
+  geom_smooth() +
+  geom_hline(yintercept = 0, color = "red", size = 1) +
+  labs(title = "Fitted values vs Residuals")
+```
+```{r}
+n_date <- unique(data_s[, c("date")])
+n_weekdays <- unique(data_s[, c("weekday")])
 period <- 24
 ```
 
@@ -151,6 +228,7 @@ ggplot(data_t, aes(date_time, traffic_volume)) +
         axis.title = element_text(size = 12, face = "bold")) +
   labs(x = "Date", y = "Traffic_Volume")
 ```
+
 ```{r}
 N <- nrow(data_t)
 window <- N / period # number of days in the train set
@@ -168,6 +246,8 @@ paste("R-squared: ",
       round(smmr_1$r.squared, 3),
       ", p-value of F test: ",
       1-pf(smmr_1$fstatistic[1], smmr_1$fstatistic[2], smmr_1$fstatistic[3]))
+
+summary(lm_m_1)
 ```
 ```{r}
 datas <- rbindlist(list(data_t[, .(traffic_volume, date_time)],
@@ -182,36 +262,131 @@ ggplot(data = datas, aes(date_time, traffic_volume, group = type, colour = type)
 ```
 ```{r}
 ggplot(data = data.table(Fitted_values = lm_m_1$fitted.values,
-                         Residuals = lm_m_1$residuals),
-       aes(Fitted_values, Residuals)) +
+                         Residuals = lm_m_1$residuals,
+                         date = datas$date_time),
+       aes(date, Residuals)) +
   geom_point(size = 1.7) +
   geom_smooth() +
   geom_hline(yintercept = 0, color = "red", size = 1) +
-  labs(title = "Fitted values vs Residuals")
+  labs(title = "residuals")
 ```
 ```{r}
-z <- ts(z)
+ggQQ <- function(lm){
+  # extract standardized residuals from the fit
+  d <- data.frame(std.resid = rstandard(lm))
+  # calculate 1Q/4Q line
+  y <- quantile(d$std.resid[!is.na(d$std.resid)], c(0.25, 0.75))
+  x <- qnorm(c(0.25, 0.75))
+  slope <- diff(y)/diff(x)
+  int <- y[1L] - slope * x[1L]
+  
+  p <- ggplot(data = d, aes(sample = std.resid)) +
+    stat_qq(shape = 1, size = 3) +         # open circles
+    labs(title = "Normal Q-Q",             # plot title
+         x = "Theoretical Quantiles",      # x-axis label
+         y = "Standardized Residuals") +   # y-axis label
+    geom_abline(slope = slope, intercept = int, linetype = "dashed",
+                size = 1, col = "firebrick1") # dashed reference line
+  return(p)
+}
+```
 
-volume_fit <- tslm(z ~ temp, data = data_s)
-fcast <- forecast(volume_fit)
-autoplot(fcast) +
-  ggtitle("Forecasts of beer production using regression") +
-  xlab("Year") + ylab("megalitres")
+```{r}
+ggQQ(lm_m_1)
 ```
 ```{r}
-fit_1 <- tslm(z ~ temp, data = data_s)
-h <- 4
-fcast.ave <- forecast(fit_1,
-  newdata = data.frame(temp = rep(mean(data_s[,"temp"]), h)))
-fcast.up <- forecast(fit.cons,
-  newdata = data.frame(Income = rep(5, h)))
-autoplot(uschange[, "Consumption"]) +
-  ylab("% change in US consumption") +
-  autolayer(fcast.ave, series = "Average increase",
-    PI = TRUE) +
-  autolayer(fcast.up, series = "Extreme increase",
-    PI = TRUE) +
-  guides(colour = guide_legend(title = "Scenario"))
+lm_m_2 <- lm(traffic_volume ~ 0 + Daily + Weekly + Daily:Weekly,
+             data = matrix_train)
+
+summary(lm_m_2)
 ```
 
+```{r}
+datas <- rbindlist(list(data_t[, .(traffic_volume, date_time)],
+                        data.table(traffic_volume = lm_m_2$fitted.values, data_time = data_t[, date_time])))
+datas[, type := rep(c("Real", "Fitted"), each = nrow(data_t))]
+ 
+ggplot(data = datas, aes(date_time, traffic_volume, group = type, colour = type)) +
+  geom_line(size = 0.8) +
+  theme_bw() +
+  labs(x = "Time", y = "Traffic Volume",
+       title = "Fit from MLR")
+```
 
+```{r}
+ggQQ(lm_m_2)
+```
+```{r}
+predWeekReg <- function(data, set_of_date){
+  
+  # Subsetting the dataset by dates
+  data_train <- data[date %in% set_of_date]
+  
+  N <- nrow(data_train)
+  window <- N / period # number of days in the train set
+  # 1, ..., period, 1, ..., period - and so on for the daily season 
+  # Using feature "week_num" for the weekly season
+  matrix_train <- data.table(Load = data_train[, traffic_volume],
+                           Daily = as.factor(rep(1:period, window)),
+                           Weekly = as.factor(data_train[, week_num]))
+  
+  # Creation of the model
+  lm_m <- lm(Load ~ 0 + Daily + Weekly + Daily:Weekly, data = matrix_train)
+  
+  # Creation of the forecast for one week ahead
+  pred_week <- predict(lm_m, matrix_train[1:(7*period), -1, with = FALSE])
+  
+  return(as.vector(pred_week))
+}
+```
+
+```{r}
+mape <- function(real, pred){
+  return(100 * mean(abs((real - pred)/real)))
+}
+```
+
+```{r}
+traffic_dt$type = 1
+
+n_type <- unique(traffic_dt[, type])
+
+n_weeks <- floor(length(n_date)/7) - 2
+
+lm_pred_weeks_1 <- sapply(0:(n_weeks-1), function(i)
+  predWeekReg(traffic_dt[type == n_type[1]], n_date[((i*7)+1):((i*7)+7*2)]))
+
+lm_err_mape_1 <- sapply(0:(n_weeks-1), function(i)
+  mape(traffic_dt[(type == n_type[1] & date %in% n_date[(15+(i*7)):(21+(i*7))]), traffic_volume],
+       lm_pred_weeks_1[, i+1]))
+```
+
+```{r}
+datas <- data.table(value = c(as.vector(lm_pred_weeks_1),
+                              traffic_dt[(type == n_type[1]) & (date %in% n_date[-c(1:14,365)]), traffic_volume]),
+                    date_time = c(rep(DT[-c(1:(14*48), (17473:nrow(DT))), date_time], 2)),
+                    type = c(rep("MLR", nrow(lm_pred_weeks_1)*ncol(lm_pred_weeks_1)),
+                             rep("Real", nrow(lm_pred_weeks_1)*ncol(lm_pred_weeks_1))),
+                    week = c(rep(1:50, each = 336), rep(1:50, each = 336)))
+ 
+saveGIF({
+  oopt = ani.options(interval = 0.9, nmax = 50)
+  for(i in 1:ani.options("nmax")){
+    print(ggplot(data = datas[week == i], aes(date_time, value, group = type, colour = type)) +
+            geom_line(size = 0.8) +
+            scale_y_continuous(limits = c(min(datas[, value]), max(datas[, value]))) + 
+            theme(panel.border = element_blank(), panel.background = element_blank(),
+                  panel.grid.minor = element_line(colour = "grey90"),
+                  panel.grid.major = element_line(colour = "grey90"),
+                  panel.grid.major.x = element_line(colour = "grey90"),
+                  title = element_text(size = 15),
+                  axis.text = element_text(size = 10),
+                  axis.title = element_text(size = 12, face = "bold")) +
+            labs(x = "Time", y = "Load (kW)",
+                 title = paste("Forecast of MLR (", n_type[1], "); ", "week: ", i, "; MAPE: ",
+                               round(lm_err_mape_1[i], 2), "%", sep = "")))
+    ani.pause()
+  }}, movie.name = "industry_1.gif", ani.height = 450, ani.width = 750)
+
+
+```

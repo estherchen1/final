@@ -82,7 +82,7 @@ traffic_2$date <- as.Date(traffic_2$date_time, "%m/%d/%Y")
 
 traffic_2$weekday <- weekdays(traffic_2$date)
 
-traffic_2$weekday <- ordered(traffic_2$day, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", 
+traffic_2$weekday <- ordered(traffic_2$date, levels=c("Monday", "Tuesday", "Wednesday", "Thursday", 
 "Friday", "Saturday", "Sunday"))
 
 # traffic_2$tod <- ifelse(traffic_2$hournum >= 03 & traffic_2$hournum <= 07 , "Early Morning",
@@ -197,6 +197,13 @@ plot(traffic$weather_main, traffic$temp)
 ggplot(traffic_2, aes(x = hour, y = traffic_volume)) +
   geom_point() +
     facet_wrap(~day)
+```
+```{r}
+traffic_2_select <- traffic_2 %>% filter(year ==2018)
+
+ggplot(traffic_2_select, aes(x = date, y = traffic_volume)) +
+  geom_line()
+
 ```
 
 

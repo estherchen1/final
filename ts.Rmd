@@ -2,12 +2,44 @@
 title: "TS"
 output: html_document
 ---
+
 ```{r}
-library(data.table)
-library(tseries)
-library(forecast)
+require(data.table)
+require(TSA)
+require(forecast)
+require(xts)
+require(tseries)
+require(graphics)
 ```
 
 ```{r}
+qplot(temp, traffic_volume, data=data_r) +
+  ylab("Traffic Volume") + xlab("Temperature (C)")
+```
+```{r}
+data_s <- train_data[(date %in% n_date[20:21])]
+
+data_s_time <- data_s[,c("date_time","traffic_volume")] 
+ts_1 <- ts(data_s_time)
+gglagplot(ts_1)
+```
+```{r}
+data_s <- train_data[(date %in% n_date[1:366])]
+
+data_s_time <- data_s[,c("date_time","traffic_volume")] 
+ts_1 <- ts(data_s_time)
+ggAcf(ts_1)
+```
+```{r}
+adf.test(data_s_time$traffic_volume)
+```
+```{r}
+p <- periodogram(data_s_time$traffic_volume)
+data.table(period=1/p$freq, spec=p$spec)[order(-spec)][1:2]
+```
+
+```{r}
+train_data <- 
 
 ```
+
