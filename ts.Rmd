@@ -11,11 +11,117 @@ require(xts)
 require(tseries)
 require(graphics)
 ```
+```{r}
+traffic_2 <- mutate(traffic_2, month_year = paste(year(date), formatC(month(date), width = 2, flag = "0")))
+
+month_vol <- aggregate(traffic_2$traffic_volume, by = list(traffic_2$month_year), FUN = function(x) mean(x, na.rm=T))
+
+month_vol <- month_vol %>% rename(traffic_volume = x,
+                    month_year = Group.1)
+month_vol <- month_vol %>% mutate(month_year = parse_date_time(month_year, "ym"))
+
+month_vol <- month_vol %>% mutate(month = month(month_year),
+                                  year = year(month_year))
+str(month_vol)
+
+seasonal <- ggplot(month_vol, aes(x = month, y = traffic_volume, group = year)) +
+	geom_line(aes(color = year)) +
+	theme_classic() +
+  ggtitle("Monthly Aggregate Mean Traffic Volume by Year")
+
+seasonal+scale_color_gradientn(colours = rainbow(7))
+```
+```{r}
+day_vol <- aggregate(traffic_2$traffic_volume, by = list(traffic_2$date), FUN = function(x) mean(x, na.rm=T))
+
+day_vol <- day_vol %>% rename(traffic_volume = x,
+                  date = Group.1)
+
+day_vol <- day_vol %>% mutate(month = month(date),
+                  day = format(as.Date(day_vol$date,format="%Y-%m-%d"), format = "%d"),
+                  year = year(date))
+str(day_vol)
+
+
+day_vol_select <- day_vol %>% filter(year == 2013)
+
+monthly <- ggplot(day_vol_select, aes(x = day, y = traffic_volume, group = month)) +
+	geom_line(aes(color = month)) +
+	theme_classic() +
+  ggtitle("Daily Aggregate Mean Traffic Volume by Month in 2013")
+
+monthly
+```
+```{r}
+weekday_vol <- aggregate(traffic_2$traffic_volume, by = list(traffic_2$hour), FUN = function(x) mean(x, na.rm=T))
+```
+
+```{r}
+# Transform to `ts` class
+monthly_traffic_ts <- ts(month_vol$traffic_volume, start = 2012, end = 2018, freq = 12)  # Specify start and end year, measurement frequency (monthly = 12)
+
+# Decompose using `stl()`
+monthly_traffic_stl <- stl(monthly_traffic_ts, s.window = "period")
+
+# Generate plots
+plot(monthly_traffic_stl)  # top=original data, second=estimated seasonal, third=estimated smooth trend, bottom=estimated irregular element i.e. unaccounted for variation
+monthplot(monthly_traffic_ts, choice = "seasonal")  # variation in milk production for each month
+seasonplot(monthly_traffic_ts)
+```
+```{r}
+monthly_traffic_model <- window(x = monthly_traffic_ts, start = c(2012), end = c(2016))
+monthly_traffic_test <- window(x = monthly_traffic_ts, start = c(2016))
+
+```
+
+```{r}
+# Creating model objects of each type of ets model
+traffic_ets_auto <- ets(monthly_traffic_model)
+traffic_ets_mmm <- ets(monthly_traffic_model, model = "MMM")
+traffic_ets_zzz<- ets(monthly_traffic_model, model = "ZZZ")
+traffic_ets_mmm_damped <- ets(monthly_traffic_model, model = "MMM", damped = TRUE)
+
+# Creating forecast objects from the model objects
+traffic_ets_fc <- forecast(traffic_ets_auto, h = 60)  # `h = 60` means that the forecast will be 60 time periods long, in our case a time period is one month
+traffic_ets_mmm_fc <- forecast(traffic_ets_mmm, h = 60)
+traffic_ets_zzz_fc <- forecast(traffic_ets_zzz, h = 60)
+traffic_ets_mmm_damped_fc <- forecast(traffic_ets_mmm_damped, h = 60)
+
+# Convert forecasts to data frames
+traffic_ets_fc_df <- cbind("Month" = rownames(as.data.frame(traffic_ets_fc)), as.data.frame(traffic_ets_fc))  # Creating a data frame
+names(traffic_ets_fc_df) <- gsub(" ", "_", names(traffic_ets_fc_df))  # Removing whitespace from column names
+traffic_ets_fc_df$Date <- as.Date(paste("01-", traffic_ets_fc_df$Month, sep = ""), format = "%d-%b %Y")  # prepending day of month to date
+traffic_ets_fc_df$Model <- rep("ets")  # Adding column of model type
+
+traffic_ets_mmm_fc_df <- cbind("Month" = rownames(as.data.frame(milk_ets_mmm_fc)), as.data.frame(milk_ets_mmm_fc))
+names(milk_ets_mmm_fc_df) <- gsub(" ", "_", names(milk_ets_mmm_fc_df))
+traffic_ets_mmm_fc_df$Date <- as.Date(paste("01-", milk_ets_mmm_fc_df$Month, sep = ""), format = "%d-%b %Y")
+traffic_ets_mmm_fc_df$Model <- rep("ets_mmm")
+
+traffic_ets_zzz_fc_df <- cbind("Month" = rownames(as.data.frame(milk_ets_zzz_fc)), as.data.frame(milk_ets_zzz_fc))
+names(milk_ets_zzz_fc_df) <- gsub(" ", "_", names(milk_ets_zzz_fc_df))
+traffic_ets_zzz_fc_df$Date <- as.Date(paste("01-", milk_ets_zzz_fc_df$Month, sep = ""), format = "%d-%b %Y")
+traffic_ets_zzz_fc_df$Model <- rep("ets_zzz")
+
+milk_ets_mmm_damped_fc_df <- cbind("Month" = rownames(as.data.frame(milk_ets_mmm_damped_fc)), as.data.frame(milk_ets_mmm_damped_fc))
+names(milk_ets_mmm_damped_fc_df) <- gsub(" ", "_", names(milk_ets_mmm_damped_fc_df))
+milk_ets_mmm_damped_fc_df$Date <- as.Date(paste("01-", milk_ets_mmm_damped_fc_df$Month, sep = ""), format = "%d-%b %Y")
+milk_ets_mmm_damped_fc_df$Model <- rep("ets_mmm_damped")
+
+# Combining into one data frame
+forecast_all <- rbind(milk_ets_fc_df, milk_ets_mmm_fc_df, milk_ets_zzz_fc_df, milk_ets_mmm_damped_fc_df)
+```
+
+
+
+
+
 
 ```{r}
 qplot(temp, traffic_volume, data=data_r) +
   ylab("Traffic Volume") + xlab("Temperature (C)")
 ```
+
 ```{r}
 data_s <- train_data[(date %in% n_date[20:21])]
 
@@ -23,6 +129,7 @@ data_s_time <- data_s[,c("date_time","traffic_volume")]
 ts_1 <- ts(data_s_time)
 gglagplot(ts_1)
 ```
+
 ```{r}
 data_s <- train_data[(date %in% n_date[1:366])]
 
@@ -30,9 +137,11 @@ data_s_time <- data_s[,c("date_time","traffic_volume")]
 ts_1 <- ts(data_s_time)
 ggAcf(ts_1)
 ```
+
 ```{r}
 adf.test(data_s_time$traffic_volume)
 ```
+
 ```{r}
 p <- periodogram(data_s_time$traffic_volume)
 data.table(period=1/p$freq, spec=p$spec)[order(-spec)][1:2]

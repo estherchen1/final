@@ -111,7 +111,6 @@ axis(side = 1, at = tt, labels = ifelse(m == "01", trunc(tt), m), cex.axis = .7)
 ```{r}
 z <- ts(z)
 
-
 # volume_fit <- tslm(z ~ , data = data_s)
 # fcast <- forecast(volume_fit)
 # autoplot(fcast) +
@@ -137,7 +136,7 @@ str(data_s_2)
 ```{r}
 vol_month <- aggregate(data_s_2$traffic_volume, by = list(data_s_2$month_year), FUN = function(x) mean(x, na.rm=T))
 
-my_ts <- ts(vol_month$x, frequency=12, start = c(2015, 06), end = c(2017, 06))
+my_ts <- ts(vol_month$x, frequency=12, start = c(2016, 06), end = c(2017, 06))
 plot(my_ts)
 ```
 ```{r}
@@ -149,7 +148,7 @@ mymodel <- tslm(traffic_volume~season,my_df_ts)
 my_fc <- forecast(mymodel,h=9, level = c(80))
 autoplot(my_fc)
 
-my_ts_2 <- ts(vol_month_te$x, frequency=12, start = c(2016, 06), end = c(2018, 03))
+my_ts_2 <- ts(vol_month_te$x, frequency=12, start = c(2017, 06), end = c(2018, 03))
 plot(my_ts_2)
 ```
 ```{r}
@@ -344,49 +343,4 @@ predWeekReg <- function(data, set_of_date){
 mape <- function(real, pred){
   return(100 * mean(abs((real - pred)/real)))
 }
-```
-
-```{r}
-traffic_dt$type = 1
-
-n_type <- unique(traffic_dt[, type])
-
-n_weeks <- floor(length(n_date)/7) - 2
-
-lm_pred_weeks_1 <- sapply(0:(n_weeks-1), function(i)
-  predWeekReg(traffic_dt[type == n_type[1]], n_date[((i*7)+1):((i*7)+7*2)]))
-
-lm_err_mape_1 <- sapply(0:(n_weeks-1), function(i)
-  mape(traffic_dt[(type == n_type[1] & date %in% n_date[(15+(i*7)):(21+(i*7))]), traffic_volume],
-       lm_pred_weeks_1[, i+1]))
-```
-
-```{r}
-datas <- data.table(value = c(as.vector(lm_pred_weeks_1),
-                              traffic_dt[(type == n_type[1]) & (date %in% n_date[-c(1:14,365)]), traffic_volume]),
-                    date_time = c(rep(DT[-c(1:(14*48), (17473:nrow(DT))), date_time], 2)),
-                    type = c(rep("MLR", nrow(lm_pred_weeks_1)*ncol(lm_pred_weeks_1)),
-                             rep("Real", nrow(lm_pred_weeks_1)*ncol(lm_pred_weeks_1))),
-                    week = c(rep(1:50, each = 336), rep(1:50, each = 336)))
- 
-saveGIF({
-  oopt = ani.options(interval = 0.9, nmax = 50)
-  for(i in 1:ani.options("nmax")){
-    print(ggplot(data = datas[week == i], aes(date_time, value, group = type, colour = type)) +
-            geom_line(size = 0.8) +
-            scale_y_continuous(limits = c(min(datas[, value]), max(datas[, value]))) + 
-            theme(panel.border = element_blank(), panel.background = element_blank(),
-                  panel.grid.minor = element_line(colour = "grey90"),
-                  panel.grid.major = element_line(colour = "grey90"),
-                  panel.grid.major.x = element_line(colour = "grey90"),
-                  title = element_text(size = 15),
-                  axis.text = element_text(size = 10),
-                  axis.title = element_text(size = 12, face = "bold")) +
-            labs(x = "Time", y = "Load (kW)",
-                 title = paste("Forecast of MLR (", n_type[1], "); ", "week: ", i, "; MAPE: ",
-                               round(lm_err_mape_1[i], 2), "%", sep = "")))
-    ani.pause()
-  }}, movie.name = "industry_1.gif", ani.height = 450, ani.width = 750)
-
-
 ```

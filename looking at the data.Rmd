@@ -148,10 +148,10 @@ ggplot(holiday, aes(x=holiday, y=traffic_volume, group=holiday)) +
 ggplot(holiday, aes(x = holiday, y = traffic_volume, group = holiday)) +
   geom_bar(stat = "identity")
 
-ggplot(traffic_2, aes(x = day, y = traffic_volume, group = day)) +
+ggplot(traffic_2, aes(x = weekday, y = traffic_volume)) +
   geom_boxplot()
 
-ggplot(traffic_2, aes(x = day, y = traffic_volume, group = day)) +
+ggplot(traffic_2, aes(x = weekday, y = traffic_volume, group = weekday)) +
   geom_bar(stat = "identity")
 
 # ggplot(traffic, aes(x = tod, y = traffic_volume, group = tod)) +
@@ -165,8 +165,6 @@ ggplot(traffic_2, aes(x = year, y = traffic_volume)) +
 
 ggplot(traffic_2, aes(x = month, y = traffic_volume, group = month)) +
   geom_boxplot()
-
-plot(traffic_2$day, traffic_2$traffic_volume)
 
 ggplot(traffic_2, aes(x = hour, y = traffic_volume, group = hour)) +
   geom_boxplot()
@@ -205,6 +203,24 @@ ggplot(traffic_2_select, aes(x = date, y = traffic_volume)) +
   geom_line()
 
 ```
+```{r}
+ggplot(traffic, aes(x = weather_main)) +
+  geom_bar()
 
+
+time_plot <- ggplot(traffic_2_select, aes(x = date, y = traffic_volume)) +
+	geom_line() +
+	scale_x_date(date_labels = "%Y", date_breaks = "1 year") +
+	theme_classic()
+
+time_plot
+
+decomp_2 <- ggplot(traffic_2, aes(x = date, y = traffic_volume)) +
+	geom_line() +
+	geom_smooth(method = "loess", se = FALSE, span = 0.6) +
+	theme_classic()
+
+decomp_2
+```
 
 
