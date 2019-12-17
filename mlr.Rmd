@@ -166,7 +166,7 @@ ggplot(data = data.table(Fitted_values = mymodel$fitted.values,
   labs(title = "Fitted values vs Residuals")
 ```
 ```{r}
-n_type <- unique(traffic_dt[, type])
+
 n_date <- unique(data_s[, c("date")])
 n_weekdays <- unique(data_s[, c("weekday")])
 period <- 24
