@@ -9,6 +9,7 @@ library(tseries)
 library(forecast)
 library(TSA)
 ```
+
 ```{r}
 traffic_dt <- as.data.table(traffic_2)
 
@@ -80,15 +81,6 @@ ggplot(data_s_time, aes(x = date_time, y = traffic_volume)) +
   xlab("Day") + ylab("Traffic Volume") +
   ggtitle("Traffic Volume Hourly")
 ```
-```{r}
-# n_ts_1 <- naive(ts_1)
-# 
-# res <- residuals(n_ts_1)
-# 
-# autoplot(res) + 
-#   xlab("Day") + ylab("") +
-#   ggtitle("Residuals from naïve method")
-```
 
 ```{r}
 library(zoo)
@@ -110,13 +102,6 @@ axis(side = 1, at = tt, labels = ifelse(m == "01", trunc(tt), m), cex.axis = .7)
 
 ```{r}
 z <- ts(z)
-
-
-# volume_fit <- tslm(z ~ , data = data_s)
-# fcast <- forecast(volume_fit)
-# autoplot(fcast) +
-#   ggtitle("Forecasts of beer production using regression") +
-#   xlab("Year") + ylab("megalitres")
 ```
 
 ```{r}
@@ -137,7 +122,7 @@ str(data_s_2)
 ```{r}
 vol_month <- aggregate(data_s_2$traffic_volume, by = list(data_s_2$month_year), FUN = function(x) mean(x, na.rm=T))
 
-my_ts <- ts(vol_month$x, frequency=12, start = c(2015, 06), end = c(2017, 06))
+my_ts <- ts(vol_month$x, frequency=12, start = c(2016, 06), end = c(2017, 06))
 plot(my_ts)
 ```
 ```{r}
@@ -149,36 +134,8 @@ mymodel <- tslm(traffic_volume~season,my_df_ts)
 my_fc <- forecast(mymodel,h=9, level = c(80))
 autoplot(my_fc)
 
-my_ts_2 <- ts(vol_month_te$x, frequency=12, start = c(2016, 06), end = c(2018, 03))
+my_ts_2 <- ts(vol_month_te$x, frequency=12, start = c(2017, 06), end = c(2018, 03))
 plot(my_ts_2)
-```
-```{r}
-# data_te <- train_data[(date %in% n_date[367:600])]
-# 
-# data_te <- mutate(data_te, month_year = paste(year(date), formatC(month(date), width = 2, flag = "0")))
-# 
-# data_te <- mutate(data_te, year_day = paste(year(date),formatC(month(date), width = 2, flag = "0"), formatC(day(date),width = 2, flag = "0")))
-# 
-# data_te <- mutate(data_te, week = week(date))
-# 
-# data_te <- mutate(data_te, year = year(date))
-# 
-# data_te$year <- as.factor(data_te$year)
-# 
-# data_te_2 <- data_te[,c("date","traffic_volume","month_year","year_day","week","year")]
-# 
-# str(data_s_2)
-# 
-# vol_month_te <- aggregate(data_te_2$traffic_volume, by = list(data_te_2$month_year), FUN = function(x) mean(x, na.rm=T))
-# 
-# my_ts_2 <- ts(vol_month_te$x, frequency=12, start = c(2016, 04), end = c(2017, 01))
-# # plot(my_ts_2)
-# # lines(fitted(my_fc),col="blue")
-# vol_month_te$fitted <- fitted(my_fc)
-# 
-# ggplot(data_te_2, aes(x = date, y = traffic_volume)) +
-#   geom_line(col='red') +
-#   geom_line(aes(y=fitted),col='blue')
 ```
 
 ```{r}
@@ -209,6 +166,7 @@ ggplot(data = data.table(Fitted_values = mymodel$fitted.values,
   labs(title = "Fitted values vs Residuals")
 ```
 ```{r}
+
 n_date <- unique(data_s[, c("date")])
 n_weekdays <- unique(data_s[, c("weekday")])
 period <- 24
@@ -299,17 +257,8 @@ datas <- rbindlist(list(data_r[, .(traffic_volume, date_time)],
 datas[, type := rep(c("Real", "Fitted"), each = nrow(data_r))]
 
 ggplot(data = datas, aes(date_time, traffic_volume, group = type, colour = type)) +
-  geom_line(size = 0.8) +
+  geom_line() +
   theme_bw() +
   labs(x = "Time", y = "Traffic VOlume",
        title = "Fit from MLR")
-```
-```{r}
-ggplot(data = data.table(Fitted_values = lm_m_2$fitted.values,
-                         Residuals = lm_m_2$residuals),
-       aes(Fitted_values, Residuals)) +
-  geom_point(size = 1.7) +
-  geom_hline(yintercept = 0, color = "red", size = 1) +
-  labs(title = "Fitted values vs Residuals")
-```
 ```

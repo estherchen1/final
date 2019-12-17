@@ -11,27 +11,203 @@ require(xts)
 require(tseries)
 require(graphics)
 ```
-
 ```{r}
-qplot(temp, traffic_volume, data=data_r) +
-  ylab("Traffic Volume") + xlab("Temperature (C)")
+traffic_2 <- mutate(traffic_2, month_year = paste(year(date), formatC(month(date), width = 2, flag = "0")))
+
+month_vol <- aggregate(traffic_2$traffic_volume, by = list(traffic_2$month_year), FUN = function(x) mean(x, na.rm=T))
+
+month_vol <- month_vol %>% rename(traffic_volume = x,
+                    month_year = Group.1)
+month_vol <- month_vol %>% mutate(month_year = parse_date_time(month_year, "ym"))
+
+month_vol <- month_vol %>% mutate(month = month(month_year),
+                                  year = year(month_year))
+str(month_vol)
+
+seasonal <- ggplot(month_vol, aes(x = month, y = traffic_volume, group = year)) +
+	geom_line(aes(color = year)) +
+	theme_classic() +
+  ggtitle("Monthly Aggregate Mean Traffic Volume by Year")
+
+seasonal+scale_color_gradientn(colours = rainbow(7))
 ```
 ```{r}
-data_s <- train_data[(date %in% n_date[20:21])]
+day_vol <- aggregate(traffic_2$traffic_volume, by = list(traffic_2$date), FUN = function(x) mean(x, na.rm=T))
 
-data_s_time <- data_s[,c("date_time","traffic_volume")] 
-ts_1 <- ts(data_s_time)
-gglagplot(ts_1)
+day_vol <- day_vol %>% rename(traffic_volume = x,
+                  date = Group.1)
+
+day_vol <- day_vol %>% mutate(month = month(date),
+                  day = format(as.Date(day_vol$date,format="%Y-%m-%d"), format = "%d"),
+                  year = year(date))
+str(day_vol)
+
+
+day_vol_select <- day_vol %>% filter(year == 2016)
+
+monthly <- ggplot(day_vol_select, aes(x = day, y = traffic_volume, group = month)) +
+	geom_line(aes(color = month)) +
+	theme_classic() +
+  ggtitle("Daily Aggregate Mean Traffic Volume by Month in 2013")
+
+monthly
 ```
 ```{r}
-data_s <- train_data[(date %in% n_date[1:366])]
+weekday_vol <- aggregate(traffic_2$traffic_volume, by = list(traffic_2$hour), FUN = function(x) mean(x, na.rm=T))
+```
 
-data_s_time <- data_s[,c("date_time","traffic_volume")] 
-ts_1 <- ts(data_s_time)
-ggAcf(ts_1)
+```{r}
+# Transform to `ts` class
+monthly_traffic_ts <- ts(month_vol$traffic_volume, start = 2012, end = 2018, freq = 12)  # Specify start and end year, measurement frequency (monthly = 12)
+
+# Decompose using `stl()`
+monthly_traffic_stl <- stl(monthly_traffic_ts, s.window = "period")
+
+# Generate plots
+plot(monthly_traffic_stl)  # top=original data, second=estimated seasonal, third=estimated smooth trend, bottom=estimated irregular element i.e. unaccounted for variation
+monthplot(monthly_traffic_ts, choice = "seasonal")  # variation in milk production for each month
+seasonplot(monthly_traffic_ts)
 ```
 ```{r}
-adf.test(data_s_time$traffic_volume)
+monthly_traffic_model <- window(x = monthly_traffic_ts, start = c(2012), end = c(2016))
+monthly_traffic_test <- window(x = monthly_traffic_ts, start = c(2016))
+
+```
+
+```{r}
+# Creating model objects of each type of ets model
+traffic_ets_auto <- ets(monthly_traffic_model)
+traffic_ets_mmm <- ets(monthly_traffic_model, model = "MMM")
+traffic_ets_zzz<- ets(monthly_traffic_model, model = "ZZZ")
+traffic_ets_mmm_damped <- ets(monthly_traffic_model, model = "MMM", damped = TRUE)
+
+# Creating forecast objects from the model objects
+traffic_ets_fc <- forecast(traffic_ets_auto, h = 24)  # `h = 60` means that the forecast will be 60 time periods long, in our case a time period is one month
+traffic_ets_mmm_fc <- forecast(traffic_ets_mmm, h = 24)
+traffic_ets_zzz_fc <- forecast(traffic_ets_zzz, h = 24)
+traffic_ets_mmm_damped_fc <- forecast(traffic_ets_mmm_damped, h = 24)
+
+# Convert forecasts to data frames
+traffic_ets_fc_df <- cbind("Month" = rownames(as.data.frame(traffic_ets_fc)), as.data.frame(traffic_ets_fc))  # Creating a data frame
+names(traffic_ets_fc_df) <- gsub(" ", "_", names(traffic_ets_fc_df))  # Removing whitespace from column names
+traffic_ets_fc_df$Date <- as.Date(paste("01-", traffic_ets_fc_df$Month, sep = ""), format = "%d-%b %Y")  # prepending day of month to date
+traffic_ets_fc_df$Model <- rep("ets")  # Adding column of model type
+
+traffic_ets_mmm_fc_df <- cbind("Month" = rownames(as.data.frame(traffic_ets_mmm_fc)), as.data.frame(traffic_ets_mmm_fc))
+names(traffic_ets_mmm_fc_df) <- gsub(" ", "_", names(traffic_ets_mmm_fc_df))
+traffic_ets_mmm_fc_df$Date <- as.Date(paste("01-", traffic_ets_mmm_fc_df$Month, sep = ""), format = "%d-%b %Y")
+traffic_ets_mmm_fc_df$Model <- rep("ets_mmm")
+
+traffic_ets_zzz_fc_df <- cbind("Month" = rownames(as.data.frame(traffic_ets_zzz_fc)), as.data.frame(traffic_ets_zzz_fc))
+names(traffic_ets_zzz_fc_df) <- gsub(" ", "_", names(traffic_ets_zzz_fc_df))
+traffic_ets_zzz_fc_df$Date <- as.Date(paste("01-", traffic_ets_zzz_fc_df$Month, sep = ""), format = "%d-%b %Y")
+traffic_ets_zzz_fc_df$Model <- rep("ets_zzz")
+
+traffic_ets_mmm_damped_fc_df <- cbind("Month" = rownames(as.data.frame(traffic_ets_mmm_damped_fc)), as.data.frame(traffic_ets_mmm_damped_fc))
+names(traffic_ets_mmm_damped_fc_df) <- gsub(" ", "_", names(traffic_ets_mmm_damped_fc_df))
+traffic_ets_mmm_damped_fc_df$Date <- as.Date(paste("01-", traffic_ets_mmm_damped_fc_df$Month, sep = ""), format = "%d-%b %Y")
+traffic_ets_mmm_damped_fc_df$Model <- rep("ets_mmm_damped")
+
+# Combining into one data frame
+forecast_all <- rbind(traffic_ets_fc_df, traffic_ets_mmm_fc_df, traffic_ets_zzz_fc_df, traffic_ets_mmm_damped_fc_df)
+```
+
+```{r}
+accuracy(traffic_ets_fc, monthly_traffic_test)
+accuracy(traffic_ets_mmm_fc, monthly_traffic_test)
+accuracy(traffic_ets_zzz_fc, monthly_traffic_test)
+accuracy(traffic_ets_mmm_damped_fc, monthly_traffic_test)
+
+
+month_vol$month_date <- as.Date(month_vol$month_year, format = "%Y-%m-%d")
+
+forecast_plot <- ggplot() +
+	geom_line(data = month_vol, aes(x = month_date, y = traffic_volume)) +  # Plotting original data
+	geom_line(data = forecast_all, aes(x = Date, y = Point_Forecast, colour = Model)) +  # Plotting model forecasts
+	theme_classic() +
+  ggtitle("Comparison of forecasts to actual")
+
+forecast_plot
+```
+```{r}
+Box.test(diff(monthly_traffic_ts), lag=10, type="Ljung-Box")
+
+ggAcf(month_vol[,"traffic_volume"])
+
+fit <- auto.arima(month_vol[,c("traffic_volume")], seasonal=FALSE)
+
+fit
+
+fit %>% forecast(h=10) %>% autoplot(include=80)
+```
+```{r}
+#datatatata
+volume_dt <- traffic_2[,c("date","traffic_volume","date_time")]
+
+volume_dt <- as.data.table(volume_dt)
+
+volume_dt[, week := weekdays(date_time)]
+
+volume_dt[, ':='(week = weekdays(date_time), date = as.Date(date_time))]
+
+unique(volume_dt[, week])
+
+volume_dt <- volume_dt[-c(1:126), ]
+
+n_weekdays <- unique(volume_dt[, week])
+
+n_date <- unique(volume_dt[, date])
+
+period <- 24
+
+str(volume_dt)
+```
+```{r}
+y_ts <- 
+
+
+
+```
+
+```{r}
+stlARIMAPred <- function(Y, period = 24){
+  ts_Y <- ts(Y, start = 0, freq = period)
+  dekom <- stl(ts_Y, s.window = "periodic", robust = TRUE)
+  arima <- forecast(dekom, h = period, method = "arima")
+  return(as.vector(arima$mean))
+}
+
+stlEXPPred <- function(Y, period = 24){
+  ts_Y <- ts(Y, start = 0, freq = period)
+  dekom <- stl(ts_Y, s.window = "periodic", robust = TRUE)
+  expo <- forecast(dekom, h = period, method = "ets", etsmodel = "ZZN")
+  return(as.vector(expo$mean))
+}
+
+mape <- function(real, pred){
+  return(100 * mean(abs((real - pred)/real)))
+}
+
+predictWeek <- function(data, set_of_date, FUN, train_win = 6){
+ 
+ for_mon <- FUN(data[(week == n_weekdays[1] & date %in% set_of_date), traffic_volume])
+ seq_tuethu <- data[(week %in% n_weekdays[2:4] & date %in% set_of_date), traffic_volume]
+ for_tuethu <- as.vector(sapply(2:0, function(j)
+   FUN(seq_tuethu[(length(seq_tuethu)-(period*j)+1-(train_win*period)):(length(seq_tuethu)-(period*j))])))
+ for_fri <- FUN(data[(week == n_weekdays[5] & date %in% set_of_date), traffic_volume])
+ for_sat <- FUN(data[(week == n_weekdays[6] & date %in% set_of_date), traffic_volume])
+ for_sun <- FUN(data[(week == n_weekdays[7] & date %in% set_of_date), traffic_volume])
+ 
+ return(c(for_mon, for_tuethu, for_fri, for_sat, for_sun))
+}
+```
+
+```{r}
+for_week_arima <- predictWeek(volume_dt, n_date[56:84], stlARIMAPred) # forecast for one week
+for_week_exp <- predictWeek(volume_dt, n_date[56:84], stlEXPPred)
+real_week <- volume_dt[date %in% n_date[85:91], traffic_volume] # real consumption
+c(ARIMA = mape(real_week, for_week_arima),
+  EXP = mape(real_week, for_week_exp))
 ```
 
 ```{r}
@@ -185,76 +361,6 @@ period <- 24
 ```
 
 ```{r}
-# STL + ARIMA
-stlARIMAPred <- function(Y, period = 24){
-  ts_Y <- ts(Y, start = 0, freq = period)
-  dekom <- stl(ts_Y, s.window = 7, robust = FALSE)
-  arima <- forecast(dekom, h = period, method = "arima")
-  return(as.vector(arima$mean))
-}
-# STL + EXP
-stlEXPPred <- function(Y, period = 24){
-  ts_Y <- ts(Y, start = 0, freq = period)
-  dekom <- stl(ts_Y, s.window = 7, robust = FALSE)
-  expo <- forecast(dekom, h = period, method = "ets", etsmodel = "ZZN")
-  return(as.vector(expo$mean))
-}
-```
-
-```{r}
-predictWeek <- function(data, set_of_date, FUN, train_win = 6){
- 
- for_mon <- FUN(data[(week == n_weekdays[1] & date %in% set_of_date), traffic_volume])
- seq_tuethu <- data[(week %in% n_weekdays[2:4] & date %in% set_of_date), traffic_volume]
- for_tuethu <- as.vector(sapply(2:0, function(j)
-   FUN(seq_tuethu[(length(seq_tuethu)-(period*j)+1-(train_win*period)):(length(seq_tuethu)-(period*j))])))
- for_fri <- FUN(data[(week == n_weekdays[5] & date %in% set_of_date), traffic_volume])
- for_sat <- FUN(data[(week == n_weekdays[6] & date %in% set_of_date), traffic_volume])
- for_sun <- FUN(data[(week == n_weekdays[7] & date %in% set_of_date), traffic_volume])
- 
- return(c(for_mon, for_tuethu, for_fri, for_sat, for_sun))
-}
-```
-
-```{r}
-mape <- function(real, pred){
-  return(100 * mean(abs((real - pred)/real)))
-}
-```
-```{r}
-for_week_arima <- predictWeek(DT_agg, n_date[56:84], stlARIMAPred) # forecast for one week
-for_week_exp <- predictWeek(DT_agg, n_date[56:84], stlEXPPred)
-real_week <- DT_agg[date %in% n_date[85:91], value] # real consumption
-c(ARIMA = mape(real_week, for_week_arima),
-  EXP = mape(real_week, for_week_exp))
-```
-
-```{r testing and training}
-data_train <- DT[date %in% n_date[43:63]]
-data_test <- DT[date %in% n_date[64]]
-```
-```{r}
-averages <- data.table(traffic_volume = rep(sapply(0:2, function(i)
-  mean(data_train[((i*period*7)+1):((i+1)*period*7), traffic_volume])),
-  each = period * 7),
-  date_time = data_train$date_time)
-
-ggplot(data_train, aes(date_time, traffic_volume)) +
-  geom_line() +
-  geom_line(data = averages, aes(date_time, traffic_volume),
-            linetype = 5, alpha = 0.75, size = 1.2, color = "firebrick2") +
-  labs(x = "Date", y = "Traffic Volume") 
-```
-
-```{r}
-data_ts <- ts(data_train$traffic_volume, freq = period * 7)
-decomp_ts <- stl(data_ts, s.window = "periodic", robust = TRUE)$time.series
-
-decomp_stl <- data.table(Load = c(data_train$traffic_volume, as.numeric(decomp_ts)),
-                         Date = rep(data_train[,date_time], ncol(decomp_ts)+1),
-                         Type = factor(rep(c("original data", colnames(decomp_ts)),
-                                           each = nrow(decomp_ts)),
-                                       levels = c("original data", colnames(decomp_ts))))
 
 ggplot(decomp_stl, aes(x = Date, y = Load)) +
   geom_line() + 
@@ -262,4 +368,6 @@ ggplot(decomp_stl, aes(x = Date, y = Load)) +
   labs(x = "Date", y = NULL,
        title = "Time Series Decomposition by STL")
 ```
+
+
 
